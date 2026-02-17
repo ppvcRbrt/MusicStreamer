@@ -3,6 +3,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+builder.Services.AddLogging(loggingBuilder =>
+{
+    loggingBuilder.AddConsole();
+});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -16,8 +21,13 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    app.UseHttpsRedirection();    
+    app.UseHttpsRedirection();
 }
+app.Use(async (context, next) =>
+{
+    Console.WriteLine($"Request from: {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort}");
+    await next();
+});
 
 app.UseAuthorization();
 app.MapControllers();
