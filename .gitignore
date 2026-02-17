@@ -3,3 +3,7 @@ MusicStreamerBackend/bin/Debug/net10.0
 MusicStreamerBackend/obj/Debug/net10.0
 MusicStreamerBackend/obj
 MusicStreamerBackend/MusicStreamerBackend.sln.DotSettings.user
+Frontend/.idea
+Frontend/.svelte-kit
+Frontend/.vscode
+Frontend/node_modules
