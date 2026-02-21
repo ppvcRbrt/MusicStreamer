@@ -9,14 +9,16 @@ public class TrackEF
     public int Id { get; set; }
     [Required]
     public string Title { get; set; }
+    [Required]
+    public string FilePath { get; set; }
     public TimeSpan? Duration { get; set; }
     public string? Genre { get; set; }
     public string? ImageUrl { get; set; }
     public int AlbumId { get; set; }
     public int ArtistId { get; set; }
     
-    [ForeignKey(nameof(ArtistId))]
-    public AlbumEF Album { get; set; }
     [ForeignKey(nameof(AlbumId))]
+    public AlbumEF Album { get; set; }
+    [ForeignKey(nameof(ArtistId))]
     public ArtistEF Artist { get; set; }
 }

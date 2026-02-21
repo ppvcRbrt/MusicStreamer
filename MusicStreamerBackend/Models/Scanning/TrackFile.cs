@@ -1,3 +1,5 @@
+using TagLib;
+
 namespace MusicStreamerBackend.Models.Scanning;
 
 public class TrackFile

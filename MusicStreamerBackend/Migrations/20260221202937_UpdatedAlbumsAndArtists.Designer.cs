@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MusicStreamerBackend.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MusicStreamerBackend.Migrations
 {
     [DbContext(typeof(MusicStreamerDbContext))]
-    partial class MusicStreamerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260221202937_UpdatedAlbumsAndArtists")]
+    partial class UpdatedAlbumsAndArtists
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -99,10 +102,6 @@ namespace MusicStreamerBackend.Migrations
                     b.Property<TimeSpan?>("Duration")
                         .HasColumnType("interval");
 
-                    b.Property<string>("FilePath")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("Genre")
                         .HasColumnType("text");
 
@@ -135,13 +134,13 @@ namespace MusicStreamerBackend.Migrations
 
             modelBuilder.Entity("MusicStreamerBackend.Data.EFModels.Music.TrackEF", b =>
                 {
-                    b.HasOne("MusicStreamerBackend.Data.EFModels.Music.AlbumEF", "Album")
+                    b.HasOne("MusicStreamerBackend.Data.EFModels.Music.ArtistEF", "Artist")
                         .WithMany("Tracks")
                         .HasForeignKey("AlbumId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("MusicStreamerBackend.Data.EFModels.Music.ArtistEF", "Artist")
+                    b.HasOne("MusicStreamerBackend.Data.EFModels.Music.AlbumEF", "Album")
                         .WithMany("Tracks")
                         .HasForeignKey("ArtistId")
                         .OnDelete(DeleteBehavior.Cascade)

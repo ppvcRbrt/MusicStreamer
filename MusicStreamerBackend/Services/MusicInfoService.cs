@@ -1,3 +1,5 @@
+using System.Text.Json;
+using MusicStreamerBackend.Helpers;
 using MusicStreamerBackend.Models.Discogs;
 
 namespace MusicStreamerBackend.Services;
@@ -9,7 +11,7 @@ namespace MusicStreamerBackend.Services;
 /// </summary>
 public interface IMusicInfoService
 {
-    string GetAlbumImageUrl(string artistName, string albumName);
+    Task<DiscogsArtistReleases?> GetArtistReleases(DiscogsArtistInfo artistInfo);
     Task<DiscogsArtistInfo?> GetArtistInfo(string artistName);
 }
 
@@ -31,10 +33,10 @@ public class MusicInfoService: IMusicInfoService
         {
             throw new Exception($"No results found for artist '{artistName}' in Discogs database");
         }
-
         try
         {
-            var result = await _discogsHttpClient.GetAsync(discogsDbResult.ResourceUrl);
+            var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, discogsDbResult.ResourceUrl);
+            var result = await DiscogsApiHelpers.SendWithRateLimitHandlingAsync(_discogsHttpClient, httpRequestMessage);
             var artistInfo = await result.Content.ReadFromJsonAsync<DiscogsArtistInfo>();
             return artistInfo;
         }
@@ -44,9 +46,32 @@ public class MusicInfoService: IMusicInfoService
             throw;
         }
     }
+
+    public async Task<DiscogsArtistReleases?> GetArtistReleases(DiscogsArtistInfo artistInfo)
+    {
+        var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, artistInfo.ReleasesUrl);
+        var result = await DiscogsApiHelpers.SendWithRateLimitHandlingAsync(_discogsHttpClient, httpRequestMessage);
+        try
+        {
+            var artistReleasesInfo = await result.Content.ReadFromJsonAsync<DiscogsArtistReleases>();
+            if (artistReleasesInfo != null && artistReleasesInfo.Releases.Any())
+            {
+                return artistReleasesInfo;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, ex.Message);
+            throw;
+        }
+
+        return null;
+    }
+    
     private async Task<DiscogsDbSearchResult?> SearchDiscogsDb(string searchTerm, DbSearchResultType searchType)
     {
-        var result= await _discogsHttpClient.GetAsync($"database/search?q={searchTerm}&type={searchType.ToString().ToLower()}");
+        var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, $"database/search?q={searchTerm}&type={searchType.ToString().ToLower()}");
+        var result = await DiscogsApiHelpers.SendWithRateLimitHandlingAsync(_discogsHttpClient, httpRequestMessage);
         try
         {
             var dbSearchResult = await result.Content.ReadFromJsonAsync<DiscogsDbSearchResults>();

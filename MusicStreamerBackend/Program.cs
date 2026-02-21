@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using MusicStreamerBackend.Data;
 using MusicStreamerBackend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,6 +9,13 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<IMusicInfoService, MusicInfoService>();
+builder.Services.AddScoped<IDbStorageService, DbStorageService>();
+builder.Services.AddScoped<IStreamingService, StreamingService>();
+builder.Services.AddDbContext<MusicStreamerDbContext>(options =>
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("MusicStreamerDb"));
+});
+
 builder.Services.AddLogging(loggingBuilder =>
 {
     loggingBuilder.AddConsole();

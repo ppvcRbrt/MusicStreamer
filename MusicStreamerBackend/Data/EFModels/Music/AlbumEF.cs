@@ -11,7 +11,9 @@ public class AlbumEF
     [Required]
     public string Title { get; set; }
     public string? Genre { get; set; }
-    public DateTime ReleaseDate { get; set; }
+    public string? ImageUrl { get; set; }
+    public int? Year { get; set; }
+    public int? DiscogsDbId { get; set; }
     
     [ForeignKey(nameof(ArtistId))]
     public ArtistEF Artist { get; set; }

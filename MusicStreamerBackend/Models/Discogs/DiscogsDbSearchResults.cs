@@ -42,7 +42,7 @@ public class DiscogsDbSearchResult
 public class DiscogsDbSearchResults
 {
     public DiscogsPagination Pagination { get; set; }
-    public List<DiscogsDbSearchResult> Results { get; set; }
+    public IEnumerable<DiscogsDbSearchResult> Results { get; set; }
 }
 public class DiscogsPagination
 {
