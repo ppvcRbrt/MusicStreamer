@@ -3,18 +3,21 @@ using MusicStreamerBackend.Data.EFModels.Music;
 
 namespace MusicStreamerBackend.Services;
 
-public interface IStreamingService
+public interface IMusicService
 {
     FileStream? GetTrackFileStream(string filePath);
     string? GetContentType(string filePath);
 }
-public class StreamingService : IStreamingService
+public class MusicService : IMusicService
 {
     private readonly MusicStreamerDbContext _dbContext;
-    public StreamingService(MusicStreamerDbContext dbContext)
+    public MusicService(MusicStreamerDbContext dbContext)
     {
         _dbContext = dbContext;
     }
+    
+    
+    
     public FileStream? GetTrackFileStream(string filePath)
     {
         if (!File.Exists(filePath))

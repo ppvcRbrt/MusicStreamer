@@ -10,7 +10,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<IMusicInfoService, MusicInfoService>();
 builder.Services.AddScoped<IDbStorageService, DbStorageService>();
-builder.Services.AddScoped<IStreamingService, StreamingService>();
+builder.Services.AddScoped<IMusicService, MusicService>();
 builder.Services.AddDbContext<MusicStreamerDbContext>(options =>
 {
     options.UseNpgsql(builder.Configuration.GetConnectionString("MusicStreamerDb"));

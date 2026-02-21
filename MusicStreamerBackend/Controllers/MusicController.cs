@@ -10,8 +10,8 @@ namespace MusicStreamerBackend.Controllers;
 public class MusicController : Controller
 {
     private readonly ILogger<MusicController> _logger;
-    private readonly IStreamingService _streamService;
-    public MusicController(ILogger<MusicController> logger, IStreamingService streamService)
+    private readonly IMusicService _streamService;
+    public MusicController(ILogger<MusicController> logger, IMusicService streamService)
     {
         _logger = logger;
         _streamService = streamService;
