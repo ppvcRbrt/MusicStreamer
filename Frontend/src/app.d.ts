@@ -7,12 +7,13 @@ declare global {
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}
-		interface Song {
+		interface Track {
 			id: number;
 			title: string;
 			duration: number;
-			artist: Artist;
-			album: Album;
+			filePath: string;
+			artist?: Artist;
+			album?: Album;
 		}
 		interface Artist {
 			id: number;
@@ -21,17 +22,17 @@ declare global {
 		}
 		interface Playlist {
 			id: number;
-			name: string;
+			title: string;
 			image?: string;
-			songs: Song[];
+			songs: Track[];
 			type: 'playlist';
 		}
 		interface Album {
 			id: number;
-			name: string;
+			title: string;
 			image?: string;
 			artist: Artist;
-			songs: Song[];
+			tracks: Track[];
 			type: 'album';
 		}
 	}
