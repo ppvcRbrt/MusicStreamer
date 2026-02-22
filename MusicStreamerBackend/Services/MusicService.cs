@@ -1,5 +1,7 @@
+using Microsoft.EntityFrameworkCore;
 using MusicStreamerBackend.Data;
 using MusicStreamerBackend.Data.EFModels.Music;
+using MusicStreamerBackend.Models.DTOs;
 
 namespace MusicStreamerBackend.Services;
 
@@ -7,6 +9,8 @@ public interface IMusicService
 {
     FileStream? GetTrackFileStream(string filePath);
     string? GetContentType(string filePath);
+    List<ArtistDto> GetArtists();
+    List<AlbumDto> GetAlbums();
 }
 public class MusicService : IMusicService
 {
@@ -16,7 +20,17 @@ public class MusicService : IMusicService
         _dbContext = dbContext;
     }
     
-    
+    public List<AlbumDto> GetAlbums()
+    {
+        return _dbContext.Albums
+            .Include(a => a.Artist)
+            .Include(a => a.Tracks)
+            .Select(a => a.ToDto()).ToList();
+    }
+    public List<ArtistDto> GetArtists()
+    {
+        return _dbContext.Artists.Select(a => a.ToDto()).ToList();
+    }
     
     public FileStream? GetTrackFileStream(string filePath)
     {

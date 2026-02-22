@@ -36,7 +36,18 @@ builder.Services.AddHttpClient("Discogs", client =>
     client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Discogs", $"key={key}, secret={secret}");
 });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSvelteKit", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173", "http://localhost:4173", "http://robs-laptop:5173") // SvelteKit dev/preview ports
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
+app.UseCors("AllowSvelteKit");
 
 if (app.Environment.IsDevelopment())
 {

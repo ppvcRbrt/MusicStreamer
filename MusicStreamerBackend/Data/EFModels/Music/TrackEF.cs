@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using MusicStreamerBackend.Models.DTOs;
 
 namespace MusicStreamerBackend.Data.EFModels.Music;
 
@@ -18,7 +19,27 @@ public class TrackEF
     public int ArtistId { get; set; }
     
     [ForeignKey(nameof(AlbumId))]
-    public AlbumEF Album { get; set; }
+    public AlbumEF? Album { get; set; }
     [ForeignKey(nameof(ArtistId))]
-    public ArtistEF Artist { get; set; }
+    public ArtistEF? Artist { get; set; }
+
+    public TrackDto? ToDto(bool includeArtist = true, bool includeAlbum = true)
+    {
+        var dto = new TrackDto()
+        {
+            Id = Id,
+            Title = Title,
+            FilePath =  FilePath,
+            Duration = Duration ?? TimeSpan.Zero,
+        };
+        if (includeAlbum)
+        {
+            dto.Album = Album?.ToDto();
+        }
+        if (includeArtist)
+        {
+            dto.Artist = Artist?.ToDto();
+        }
+        return dto;
+    }
 }

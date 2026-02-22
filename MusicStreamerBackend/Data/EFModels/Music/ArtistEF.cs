@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using MusicStreamerBackend.Models.DTOs;
 
 namespace MusicStreamerBackend.Data.EFModels.Music;
 
@@ -14,4 +15,14 @@ public class ArtistEF
     
     public ICollection<AlbumEF>? Albums { get; set; }
     public ICollection<TrackEF>? Tracks { get; set; }
+    
+    public ArtistDto ToDto()
+    {
+        return new ArtistDto
+        {
+            Id = Id,
+            Name = Name,
+            Image = ImageUrl
+        };
+    }
 }
