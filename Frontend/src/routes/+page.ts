@@ -1,6 +1,7 @@
 import type { PageLoad } from './$types';
 import { apiHttpService } from '$lib/services/apiHttpService'
 import { browser } from '$app/environment';
+export const ssr = false;
 export const  load: PageLoad = async ({ params }) => {
     let artists: App.Artist[] = [];
     let albums: App.Album[] = [];

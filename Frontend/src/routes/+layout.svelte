@@ -6,11 +6,11 @@
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
-<div class="flex flex-col h-screen w-screen">
-    <div class="flex-1 overflow-auto">
+<div class="flex flex-col h-screen w-screen relative">
+    <div class="flex-1 overflow-auto pb-32">
         {@render children()}
     </div>
-    <div class="flex-shrink-0">
+    <div class="fixed bottom-0 left-0 right-0 z-50">
         <MusicPlayer/>
     </div>
 </div>

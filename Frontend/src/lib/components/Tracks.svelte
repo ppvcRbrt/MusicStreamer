@@ -2,25 +2,27 @@
     import {ScrollArea} from "$lib/components/ui/scroll-area";
     import {Button} from "$lib/components/ui/button";
     import {ChevronRight} from "@lucide/svelte";
-    import {type MusicPlayerState, currentTrack } from "../../musicPlayerState.svelte";
+    import { type MusicPlayerState, playerState } from "../../musicPlayerState.svelte";
 
     let { tracks, imageSize, height, imageSrc }: { tracks: App.Track[], imageSize: string, height: string, imageSrc?: string } = $props();
-    let playerState: MusicPlayerState = $state({
-        track: null,
-        isPlaying: false,
-        currentTime: 0
-    });
-    currentTrack.subscribe(value => playerState = value);
+    // let playerState: MusicPlayerState = $state({
+    //     isPlaying: false,
+    //     trackIndex: 0,
+    //     currentTime: 0,
+    //     duration: 0,
+    //     playList: [],
+    // });
 
-    function onTrackClick(track: App.Track) {
-        playerState.track = track;
-        playerState.isPlaying = true;
-        currentTrack.set(playerState);
+    function onTrackClick(trackIndex: number) {
+        $playerState.playList = tracks;
+        $playerState.trackIndex = trackIndex;
+        $playerState.currentTime = 0;
+        $playerState.isPlaying = true;
     }
 </script>
 
-{#snippet Track(track: App.Track, first: boolean = false)}
-    <Button variant="ghost" class="flex flex-row items-center gap-2 p-2 w-full border-b rounded-none {first ? 'border-t' : ''}" onclick={() => onTrackClick(track)}>
+{#snippet Track(track: App.Track, trackIndex: number)}
+    <Button variant="ghost" class="flex flex-row items-center gap-2 p-2 w-full border-b rounded-none {trackIndex === 0 ? 'border-t' : ''}" onclick={() => onTrackClick(trackIndex)}>
         {#if imageSrc}
             <img src={imageSrc} alt={track.title} class="rounded-full flex-shrink-0" style="height: {imageSize}; width: {imageSize};"/>
         {:else}
@@ -44,7 +46,7 @@
         orientation="vertical">
     <div class="flex flex-col w-full justify-items-start gap-1">
         {#each tracks as track, index}
-            {@render Track(track, index === 0)}
+            {@render Track(track, index)}
         {/each}
     </div>
 </ScrollArea>
