@@ -1,11 +1,7 @@
 class ApiHttpService {
     private readonly baseUrl:string;
     constructor() {
-        if (typeof window !== 'undefined') {
-            this.baseUrl = `http://${window.location.hostname}:5277`;
-        } else {
-            this.baseUrl = 'http://localhost:5277';
-        }
+        this.baseUrl = `http://robs-laptop:5277`;
     }
 
     private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {

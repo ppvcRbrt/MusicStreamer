@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.musicstreamer.front',
   appName: 'MusicStreamerFrontend',
-  webDir: 'dist'
+  webDir: 'build'
 };
 
 export default config;
