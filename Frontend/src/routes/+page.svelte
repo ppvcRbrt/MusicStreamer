@@ -6,6 +6,6 @@
 
     let { data }: { data: PageProps } = $props();
 </script>
-<Artists artists={data.artists} imageSize="8em"/>
-<Playlists playlists={data.albums} imageSize="4em" height="300px"></Playlists>
-<Tracks tracks={data.tracks} imageSize="2em" height="300px"></Tracks>
+<!--<Artists artists={data.artists} imageSize="8em"/>-->
+<!--<Playlists playlists={data.albums} imageSize="4em" height="300px"></Playlists>-->
+<Tracks tracks={data.tracks} imageSize="2em" height="100%"></Tracks>
