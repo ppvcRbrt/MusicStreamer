@@ -24,8 +24,9 @@ public class FileService: IFileService
         try
         {
             var files = Directory.GetFiles(rootFolderPath, "*.*", SearchOption.AllDirectories)
-                .Where(file => _fileTypes.Contains(Path.GetExtension(file).ToLowerInvariant()));
-
+                .Where(file => _fileTypes.Contains(Path.GetExtension(file).ToLowerInvariant()))
+                .Where(f => !Path.GetFileName(f).StartsWith("._"));
+            _logger.LogInformation("Found {Count} files found", files.Count());
             return files.Select(f => new TrackFile()
             {
                 Name =  Path.GetFileNameWithoutExtension(f),
@@ -41,18 +42,27 @@ public class FileService: IFileService
         }
     }
 
-    private TrackMetadata GetTrackMetadata(string filePath)
+    private TrackMetadata? GetTrackMetadata(string filePath)
     {
-        var tagFile = TagLib.File.Create(filePath);
-        return new TrackMetadata()
+        try
         {
-            Title = tagFile.Tag.Title ?? Path.GetFileNameWithoutExtension(filePath),
-            Artist = tagFile.Tag.AlbumArtists.FirstOrDefault() ?? NormalizeArtistName(tagFile.Tag.FirstPerformer),
-            Album = tagFile.Tag.Album,
-            Year = tagFile.Tag.Year > 0 ? (int?)tagFile.Tag.Year : null,
-            Genre = tagFile.Tag.JoinedGenres,
-            Duration = tagFile.Properties.Duration,
-        };
+            var tagFile = TagLib.File.Create(filePath);
+            _logger.LogInformation("Reading tag file: {TagFile}", tagFile.Tag.Title);
+            return new TrackMetadata()
+            {
+                Title = tagFile.Tag.Title ?? Path.GetFileNameWithoutExtension(filePath),
+                Artist = tagFile.Tag.AlbumArtists.FirstOrDefault() ?? NormalizeArtistName(tagFile.Tag.FirstPerformer),
+                Album = tagFile.Tag.Album,
+                Year = tagFile.Tag.Year > 0 ? (int?)tagFile.Tag.Year : null,
+                Genre = tagFile.Tag.JoinedGenres,
+                Duration = tagFile.Properties.Duration,
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Skipping file {FilePath}, reason: {Reason}", filePath, ex.Message);
+            return null;
+        }
     }
     
     private static string NormalizeArtistName(string artistName)

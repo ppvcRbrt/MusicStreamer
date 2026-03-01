@@ -1,4 +1,18 @@
 services:
+  music-streamer:
+    build:
+      context: ./MusicStreamerBackend
+      dockerfile: Dockerfile
+    environment:
+      - MediaLocation=/music
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    volumes:
+      - /Volumes/ExtSSD/Music:/music:ro
+    user: root
+
+
   postgres:
     image: postgres:17
     container_name: postgres
