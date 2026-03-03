@@ -13,6 +13,7 @@
     let isDragging = $state(false);
     let displayTime = $state(0);
     let isSeeking = $state(false);
+    let previousTrackIndex = $state($playerState.trackIndex);
 
     function startedDragging() {
         isDragging = true;
@@ -21,7 +22,7 @@
         displayTime = value;
         isSeeking = true;
         isDragging = false;
-        $playerState.audioHandle?.pause();
+        // $playerState.audioHandle?.pause();
     }
     function clickedSlider(value: number) {
         displayTime = value;
@@ -36,6 +37,7 @@
     function setAudioValue(value: number) {
         if($playerState.audioHandle) {
             $playerState.audioHandle.currentTime = value;
+            $playerState.isPlaying = true;
         }
     }
 
@@ -53,7 +55,10 @@
             }
 
             try {
-                await audio.play();
+                if($playerState.isPlaying)
+                {
+                    await audio.play();
+                }
             } catch (error) {
                 console.error('Failed to resume playback after seek:', error);
                 // Optionally retry or update UI to show play button
@@ -67,6 +72,15 @@
     $effect(() => {
         if (!isDragging && !isSeeking) {
             displayTime = $playerState?.audioHandle?.currentTime ?? 0;
+        }
+    });
+    $effect(() => {
+        const currentIndex = $playerState.trackIndex;
+        if (currentIndex !== previousTrackIndex) {
+            previousTrackIndex = currentIndex;
+            isDragging = false;
+            isSeeking = false;
+            displayTime = 0;
         }
     });
     function formatTime(seconds: number): string {

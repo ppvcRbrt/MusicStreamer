@@ -9,7 +9,7 @@ export function togglePlay() {
     if (audio) {
         if (!audio.paused) {
             audio.pause();
-            playerState.update(state => ({ ...state, isPlaying: false }));
+            playerState.update(state => ({ ...state, isPlaying: false}));
         } else {
             audio.play();
             playerState.update(state => ({ ...state, isPlaying: true }));
@@ -20,14 +20,14 @@ export function togglePlay() {
 export function playNext() {
     if (playerStateValue.playList.length > 0) {
         const nextIndex = (playerStateValue.trackIndex + 1) % playerStateValue.playList.length;
-        playerState.update(state => ({ ...state, trackIndex: nextIndex, isPlaying: true }));
+        playerState.update(state => ({ ...state, trackIndex: nextIndex, isPlaying: true, currentTime: 0}));
     }
 }
 
 export function playPrevious() {
     if (playerStateValue.playList.length > 0) {
         const prevIndex = (playerStateValue.trackIndex - 1 + playerStateValue.playList.length) % playerStateValue.playList.length;
-        playerState.update(state => ({...state, trackIndex: prevIndex, isPlaying: true}));
+        playerState.update(state => ({...state, trackIndex: prevIndex, isPlaying: true, currentTime: 0}));
     }
 }
 

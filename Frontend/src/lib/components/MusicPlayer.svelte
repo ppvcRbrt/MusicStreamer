@@ -2,13 +2,13 @@
     import { Button } from "$lib/components/ui/button/index.js";
     import { PlayIcon, ChevronLeftIcon, ChevronRightIcon, PauseIcon } from "@lucide/svelte";
     import TrackCard from "$lib/components/TrackCard.svelte";
-    import { type MusicPlayerState, playerState} from "../../musicPlayerState.svelte";
+    import { playerState } from "../../musicPlayerState.svelte";
     import { Progress } from "$lib/components/ui/progress";
     import { apiHttpService } from "$lib/services/apiHttpService";
     import { swipeable } from '$lib/actions/gestures.svelte';
     import MusicPlayerPage from "$lib/components/MusicPlayerPage.svelte";
     import {VerticalSpringSwipe} from "$lib/actions/verticalSpringSwipe.svelte";
-    import {playNext, playPrevious, togglePlay} from "$lib/services/musicPlayerService.svelte";
+    import { playNext, playPrevious, togglePlay } from "$lib/services/musicPlayerService.svelte";
     import { browser } from '$app/environment';
 
     let playerHeight = $state(0);
@@ -22,23 +22,26 @@
 
     let currentTrack = $derived<App.Track>($playerState.playList[$playerState.trackIndex]);
     let resourceUrl = $derived(apiHttpService.getMediaResourceUrl(currentTrack?.filePath ?? ''));
-    let currentTime = $derived($playerState.currentTime);
+    let currentTime = $derived($playerState?.currentTime ?? 0);
     let duration = $state(0);
+    let seekApplied = false;
 
     function onTimeUpdate() {
-        currentTime = $playerState.audioHandle!.currentTime;
-        $playerState.currentTime = $playerState.audioHandle!.currentTime;
+        if (!$playerState.audioHandle?.duration) return; // not loaded yet, ignore
         navigator.mediaSession?.setPositionState({
             duration: $playerState.audioHandle!.duration || 0,
             playbackRate: $playerState.audioHandle!.playbackRate,
             position: $playerState.audioHandle!.currentTime
         });
+        $playerState.currentTime = $playerState.audioHandle!.currentTime;
     }
     function onLoadedMetadata() {
         duration = $playerState.audioHandle!.duration;
         $playerState.duration = $playerState.audioHandle!.duration;
+        seekApplied = false;
         setupMediaSession();
     }
+
     function setupMediaSession() {
         navigator.mediaSession.metadata = new MediaMetadata({
             title: currentTrack?.title,
@@ -47,14 +50,23 @@
         });
         navigator.mediaSession.setActionHandler("play", () => { $playerState.audioHandle!.play(); playerState.update(s => ({ ...s, isPlaying: true })); });
         navigator.mediaSession.setActionHandler("pause", () => { $playerState.audioHandle!.pause(); playerState.update(s => ({ ...s, isPlaying: false })); });
-        navigator.mediaSession.setActionHandler("seekbackward", () => $playerState.audioHandle.currentTime -= 10);
-        navigator.mediaSession.setActionHandler("seekforward", () => $playerState.audioHandle.currentTime += 10);
+        navigator.mediaSession.setActionHandler("nexttrack", () => playNext());
+        navigator.mediaSession.setActionHandler("previoustrack", () => playPrevious());
     }
 
     function onTrackCardClick(){
         swipe.onSwipe(swipe.isUp ? "down" : "up");
     }
 
+    function onCanPlay() {
+        if (!seekApplied && $playerState.currentTime > 0) {
+            seekApplied = true;
+            $playerState.audioHandle!.currentTime = $playerState.currentTime;
+        }
+        if ($playerState.isPlaying) {
+            $playerState.audioHandle!.play();
+        }
+    }
     $effect(() => {
         document.body.style.overflow = swipe.isUp ? 'hidden' : '';
     });
@@ -67,13 +79,9 @@
         ontimeupdate={onTimeUpdate}
         onloadedmetadata={onLoadedMetadata}
         onended={playNext}
-        onplay={() => playerState.update(s => ({ ...s, isPlaying: true }))}
-        onpause={() => playerState.update(s => ({ ...s, isPlaying: false }))}
-        oncanplay={() => {
-        if ($playerState.isPlaying) {
-            $playerState.audioHandle.play();
-        }
-    }}
+        onplay={() => $playerState.isPlaying = true}
+        onpause={() => $playerState.isPlaying = false}
+        oncanplay={onCanPlay}
 />
 
 <div
