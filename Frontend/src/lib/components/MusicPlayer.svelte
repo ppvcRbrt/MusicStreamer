@@ -45,8 +45,8 @@
             artist: currentTrack.artist.name,
             album: currentTrack.album?.title,
         });
-        navigator.mediaSession.setActionHandler("play", () => $playerState.audioHandle!.play());
-        navigator.mediaSession.setActionHandler("pause", () => $playerState.audioHandle!.pause());
+        navigator.mediaSession.setActionHandler("play", () => { $playerState.audioHandle!.play(); playerState.update(s => ({ ...s, isPlaying: true })); });
+        navigator.mediaSession.setActionHandler("pause", () => { $playerState.audioHandle!.pause(); playerState.update(s => ({ ...s, isPlaying: false })); });
         navigator.mediaSession.setActionHandler("seekbackward", () => $playerState.audioHandle.currentTime -= 10);
         navigator.mediaSession.setActionHandler("seekforward", () => $playerState.audioHandle.currentTime += 10);
     }
@@ -63,6 +63,8 @@
         ontimeupdate={onTimeUpdate}
         onloadedmetadata={onLoadedMetadata}
         onended={playNext}
+        onplay={() => playerState.update(s => ({ ...s, isPlaying: true }))}
+        onpause={() => playerState.update(s => ({ ...s, isPlaying: false }))}
         oncanplay={() => {
         if ($playerState.isPlaying) {
             $playerState.audioHandle.play();

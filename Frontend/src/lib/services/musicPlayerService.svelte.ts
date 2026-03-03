@@ -5,12 +5,13 @@ playerState.subscribe(value => {
     playerStateValue = value;
 });
 export function togglePlay() {
-    if (playerStateValue.audioHandle) {
-        if (playerStateValue.isPlaying) {
-            playerStateValue.audioHandle.pause();
+    const audio = playerStateValue.audioHandle;
+    if (audio) {
+        if (!audio.paused) {
+            audio.pause();
             playerState.update(state => ({ ...state, isPlaying: false }));
         } else {
-            playerStateValue.audioHandle.play();
+            audio.play();
             playerState.update(state => ({ ...state, isPlaying: true }));
         }
     }
