@@ -40,3 +40,21 @@ Below is a simple development roadmap/plan that will be updated as more features
  - **Audio Player**
    - Background running
  - **Playlists Page**
+
+
+ ## To Do
+  - Sync play button with the current music player state
+  - Album Screen for when clicking artists
+  - Tracks Screen for when clicking on albums
+  - When clicking track image in the music player, track page should be shown
+  - Queue screen for current queue
+  - Add to queue functionality on tracks
+  - Search functionality on main screen
+  - Persitence (local storage, will most likely just persist the current state)
+  - Next/Previous track integrated for ios usage
+  - Track metadata should include track number in album
+  - Tracks should be ordered by their Album name + Track number
+  - Transcoding step when finding files to opus 128 
+  - Encoding selector for the user to pick (defaults to opus when on mobile data)
+  - Currently playing track should be highlighted throughout the player
+  
