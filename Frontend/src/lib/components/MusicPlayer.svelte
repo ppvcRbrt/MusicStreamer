@@ -51,6 +51,10 @@
         navigator.mediaSession.setActionHandler("seekforward", () => $playerState.audioHandle.currentTime += 10);
     }
 
+    function onTrackCardClick(){
+        swipe.onSwipe(swipe.isUp ? "down" : "up");
+    }
+
     $effect(() => {
         document.body.style.overflow = swipe.isUp ? 'hidden' : '';
     });
@@ -89,7 +93,7 @@
         <div class="music-player" bind:this={swipe.handle} bind:clientHeight={playerHeight}>
             <div class="flex" style="opacity: {elementOpacity};">
                 <div class="flex flex-1 min-w-0 ml-3" style="filter: blur({blur}px);">
-                    <TrackCard track={currentTrack}/>
+                    <TrackCard track={currentTrack} onclick={onTrackCardClick}/>
                 </div>
                 <div class="flex flex-shrink-0" style="filter: blur({blur}px);">
                     <Button variant="ghost" class="rounded-2xl my-auto" size="icon" style="height: 3em; width: 3em;" onclick={playPrevious} disabled={$playerState.trackIndex <= 0}>

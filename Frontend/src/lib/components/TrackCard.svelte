@@ -1,7 +1,7 @@
 <script lang="ts">
     import {onMount} from "svelte";
 
-    let { track }: { track?: App.Track } = $props();
+    let { track, onclick }: { track?: App.Track, onclick?: (e: MouseEvent) => void } = $props();
 
     let containerRef: HTMLDivElement | null = $state(null);
     let textRef: HTMLSpanElement | null = $state(null);
@@ -35,7 +35,7 @@
 
 </script>
 
-<div class="flex flex-row w-full gap-3 items-center min-w-0">
+<div class="flex flex-row w-full gap-3 items-center min-w-0 hover:cursor-pointer" {onclick}>
     <div class="flex-shrink-0">
         {#if currentTrack.album.image}
             <img src={currentTrack.album.image} class="rounded-lg" style="height: 3em; width: 3em;" />
