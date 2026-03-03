@@ -1,17 +1,11 @@
 <script lang="ts">
-    import {ScrollArea} from "$lib/components/ui/scroll-area";
-    import {Button} from "$lib/components/ui/button";
-    import {ChevronRight} from "@lucide/svelte";
-    import { type MusicPlayerState, playerState } from "../../musicPlayerState.svelte";
+    import { ScrollArea } from "$lib/components/ui/scroll-area";
+    import { Button } from "$lib/components/ui/button";
+    import { ChevronRight } from "@lucide/svelte";
+    import { playerState } from "../../musicPlayerState.svelte";
 
     let { tracks, imageSize, height, imageSrc }: { tracks: App.Track[], imageSize: string, height: string, imageSrc?: string } = $props();
-    // let playerState: MusicPlayerState = $state({
-    //     isPlaying: false,
-    //     trackIndex: 0,
-    //     currentTime: 0,
-    //     duration: 0,
-    //     playList: [],
-    // });
+    let currentlyPlayingTrackId = $derived($playerState.playList[$playerState.trackIndex]?.id ?? -1);
 
     function onTrackClick(trackIndex: number) {
         $playerState.playList = tracks;
@@ -22,7 +16,12 @@
 </script>
 
 {#snippet Track(track: App.Track, trackIndex: number)}
-    <Button variant="ghost" class="flex flex-row items-center gap-2 p-2 w-full border-b rounded-none {trackIndex === 0 ? 'border-t' : ''}" onclick={() => onTrackClick(trackIndex)}>
+    <Button
+            variant="ghost"
+            class="flex flex-row items-center gap-2 p-5 w-full border-b rounded-none
+                    {trackIndex === 0 ? 'border-t' : ''}
+                    {track.id === currentlyPlayingTrackId ? 'bg-primary/10 hover:bg-primary/15 border-l-2 border-l-primary p-5' : ''}"
+            onclick={() => onTrackClick(trackIndex)}>
         {#if imageSrc}
             <img src={imageSrc} alt={track.title} class="rounded-full flex-shrink-0" style="height: {imageSize}; width: {imageSize};"/>
         {:else}
@@ -44,7 +43,7 @@
         style="height: {height};"
         class="flex w-full rounded-md p-4"
         orientation="vertical">
-    <div class="flex flex-col w-full justify-items-start gap-1">
+    <div class="flex flex-col w-full justify-items-start">
         {#each tracks as track, index}
             {@render Track(track, index)}
         {/each}
