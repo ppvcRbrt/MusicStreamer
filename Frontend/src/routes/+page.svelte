@@ -6,6 +6,7 @@
     import Search from "$lib/components/Search.svelte";
     import {ScrollArea} from "$lib/components/ui/scroll-area";
     import {openSheet} from "../bottomSheetState.svelte";
+    import { isNativePlatform } from '$lib/utils/platform';
 
     let { data }: { data: PageProps } = $props();
     let filteredTracks: App.Track[] = $state(data.tracks);
@@ -69,7 +70,10 @@
     }
 </script>
 
-<ScrollArea class="h-full" onscrollcapture={handleScroll}>
+<ScrollArea
+        class="h-full"
+        class:safe-area={isNativePlatform}
+        onscrollcapture={handleScroll}>
     <div class="sticky top-0 z-10 transition-all duration-300 bg-secondary/40 backdrop-blur-2xl
                 {scrolled ? 'py-2 shadow-md' : 'py-0 pointer-events-none opacity-0 h-0'}">
         <div class="flex items-center gap-3 px-4">
@@ -94,3 +98,12 @@
         <Playlists playlists={filteredAlbums} title="Albums" imageSize="4em" Class="mt-5" onItemClick={handleAlbumClicked}/>
     </div>
 </ScrollArea>
+
+<style>
+    .safe-area {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+</style>
