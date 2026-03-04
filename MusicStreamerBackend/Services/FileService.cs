@@ -50,6 +50,7 @@ public class FileService: IFileService
             _logger.LogInformation("Reading tag file: {TagFile}", tagFile.Tag.Title);
             return new TrackMetadata()
             {
+                TrackNumber = tagFile.Tag.Track > 0 ? (int)tagFile.Tag.Track : 0,
                 Title = tagFile.Tag.Title ?? Path.GetFileNameWithoutExtension(filePath),
                 Artist = tagFile.Tag.AlbumArtists.FirstOrDefault() ?? NormalizeArtistName(tagFile.Tag.FirstPerformer),
                 Album = tagFile.Tag.Album,

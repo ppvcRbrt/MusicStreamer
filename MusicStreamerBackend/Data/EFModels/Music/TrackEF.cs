@@ -12,6 +12,7 @@ public class TrackEF
     public string Title { get; set; }
     [Required]
     public string FilePath { get; set; }
+    public int TrackNumber { get; set; }
     public TimeSpan? Duration { get; set; }
     public string? Genre { get; set; }
     public string? ImageUrl { get; set; }
@@ -28,6 +29,7 @@ public class TrackEF
         var dto = new TrackDto()
         {
             Id = Id,
+            TrackNumber =  TrackNumber,
             Title = Title,
             FilePath =  FilePath,
             Duration = Duration ?? TimeSpan.Zero,
