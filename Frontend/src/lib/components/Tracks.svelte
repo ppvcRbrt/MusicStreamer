@@ -4,7 +4,8 @@
     import { ChevronRight } from "@lucide/svelte";
     import { playerState } from "../../musicPlayerState.svelte";
 
-    let { tracks, imageSize, height, imageSrc }: { tracks: App.Track[], imageSize: string, height: string, imageSrc?: string } = $props();
+    let { tracks, imageSize, height, imageSrc }:
+        { tracks: App.Track[], imageSize: string, height: string, imageSrc?: string } = $props();
     let currentlyPlayingTrackId = $derived($playerState.playList[$playerState.trackIndex]?.id ?? -1);
 
     function onTrackClick(trackIndex: number) {
@@ -13,6 +14,7 @@
         $playerState.currentTime = 0;
         $playerState.isPlaying = true;
     }
+
 </script>
 
 {#snippet Track(track: App.Track, trackIndex: number)}
