@@ -9,6 +9,7 @@
     import { apiHttpService } from "$lib/services/apiHttpService";
     import { fly } from 'svelte/transition';
     import { isNativePlatform } from '$lib/utils/platform';
+    import {lockScroll, unlockScroll} from "../../bodyOverflowState.svelte";
 
     let windowInnerHeight = $state(browser ? window.innerHeight : 0);
     let sheetHeight = $state(0);
@@ -69,9 +70,12 @@
     });
 
     $effect(() => {
-        document.body.style.overflow = swipe.isUp ? 'hidden' : '';
+        if (swipe.isUp) {
+            lockScroll('bottom-sheet'); // or 'music-player' in MusicPlayer.svelte
+        } else {
+            unlockScroll('bottom-sheet'); // or 'music-player' in MusicPlayer.svelte
+        }
     });
-
     let blur = $derived(Math.min(swipe.progress * 10, 10));
     let elementOpacity = $derived(Math.max(1 - swipe.progress * 2, 0));
 

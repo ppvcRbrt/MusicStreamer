@@ -24,7 +24,7 @@ declare global {
 			id: number;
 			title: string;
 			image?: string;
-			songs: Track[];
+			tracks: Track[];
 			type: 'playlist';
 		}
 		interface Album {

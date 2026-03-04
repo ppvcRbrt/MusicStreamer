@@ -11,6 +11,7 @@
     import { playNext, playPrevious, togglePlay } from "$lib/services/musicPlayerService.svelte";
     import { browser } from '$app/environment';
     import { isNativePlatform } from '$lib/utils/platform';
+    import {lockScroll, unlockScroll} from "../../bodyOverflowState.svelte";
 
     let playerHeight = $state(0);
     let windowInnerHeight = $state(browser ? window.innerHeight : 0);
@@ -68,10 +69,14 @@
             $playerState.audioHandle!.play();
         }
     }
-    $effect(() => {
-        document.body.style.overflow = swipe.isUp ? 'hidden' : '';
-    });
 
+    $effect(() => {
+        if (swipe.isUp) {
+            lockScroll('music-player');
+        } else {
+            unlockScroll('music-player');
+        }
+    });
 </script>
 
 <audio
