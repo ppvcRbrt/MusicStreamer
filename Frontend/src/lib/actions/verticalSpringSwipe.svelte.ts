@@ -8,10 +8,12 @@ export class VerticalSpringSwipe {
 
     private height: () => number;
     private panelHeight: () => number;
+    private swipeDownThreshold?: number;
 
-    constructor(height: () => number, panelHeight: () => number) {
+    constructor(height: () => number, panelHeight: () => number, swipeDownThreshold?: number) {
         this.height = height;
         this.panelHeight = panelHeight;
+        this.swipeDownThreshold = swipeDownThreshold;
     }
 
     get top() {
@@ -42,7 +44,9 @@ export class VerticalSpringSwipe {
         if (dir === 'up' && !this.isUp) {
             this.isUp = true;
             this.y.set(this.top);
-        } else if (dir === 'down' && this.isUp) {
+        }
+        else if (dir === 'down' && this.isUp) {
+            console.log(`Swiping down: current y=${this.y.current}, top=${this.top}`);
             this.isUp = false;
             this.y.set(0);
         }
@@ -52,11 +56,17 @@ export class VerticalSpringSwipe {
         const height = this.height();
         if (!this.isUp && this.y.current < -(height * 0.25)) {
             this.onSwipe('up');
-        } else if (this.isUp && this.y.current > -(height * 0.75)) {
+        }
+        else if (this.isUp && this.swipeDownThreshold !== undefined && this.y.current > this.top + this.swipeDownThreshold) {
             this.onSwipe('down');
-        } else if (this.isUp) {
+        }
+        else if (this.isUp && this.y.current > -(height * 0.75)) {
+            this.onSwipe('down');
+        }
+        else if (this.isUp) {
             this.y.set(this.top);
-        } else {
+        }
+        else {
             this.y.set(0);
         }
     }
