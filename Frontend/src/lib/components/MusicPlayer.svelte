@@ -10,6 +10,7 @@
     import {VerticalSpringSwipe} from "$lib/actions/verticalSpringSwipe.svelte";
     import { playNext, playPrevious, togglePlay } from "$lib/services/musicPlayerService.svelte";
     import { browser } from '$app/environment';
+    import { isNativePlatform } from '$lib/utils/platform';
 
     let playerHeight = $state(0);
     let windowInnerHeight = $state(browser ? window.innerHeight : 0);
@@ -91,6 +92,7 @@
         handle: () => swipe.handle
     }}
         class="absolute bottom-0 left-0 right-0 z-30"
+        class:safe-area-top={swipe.isUp && isNativePlatform}
         style="transform: translateY({swipe.y.current}px); margin-bottom: -{windowInnerHeight - playerHeight + 25}px;"
 >
     <div class="flex h-1.5 justify-center">
@@ -129,3 +131,9 @@
         </div>
     </div>
 </div>
+
+<style>
+    .safe-area-top {
+        padding-top: env(safe-area-inset-top);
+    }
+</style>
