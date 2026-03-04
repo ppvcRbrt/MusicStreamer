@@ -90,6 +90,7 @@
         onRelease: () => swipe.onRelease(),
         handle: () => swipe.handle
     }}
+        class="absolute bottom-0 left-0 right-0 z-30"
         style="transform: translateY({swipe.y.current}px); margin-bottom: -{windowInnerHeight - playerHeight + 25}px;"
 >
     <div class="flex h-1.5 justify-center">
