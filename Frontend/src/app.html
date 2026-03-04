@@ -2,12 +2,20 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 		<script>
 			// Set dark mode by default
 			document.documentElement.classList.add('dark');
 		</script>
 		%sveltekit.head%
+		<style>
+			body {
+				padding-top: env(safe-area-inset-top);
+				padding-bottom: env(safe-area-inset-bottom);
+				padding-left: env(safe-area-inset-left);
+				padding-right: env(safe-area-inset-right);
+			}
+		</style>
 	</head>
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>
