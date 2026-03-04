@@ -3,18 +3,12 @@
     import {Button} from "$lib/components/ui/button";
     import {ChevronRight} from "@lucide/svelte";
 
-    let { playlists, imageSize, height }: { playlists: App.Playlist[]|App.Album[], imageSize: string, height: string } = $props();
+    let { playlists, imageSize, height, title, Class="", onItemClick}:
+        { playlists: App.Playlist[]|App.Album[], imageSize: string, height: string, title?: string, Class: string, onItemClick?: (itemType:App.Playlist|App.Album) => void} = $props();
 
     function onPlaylistClick(playlist: App.Playlist|App.Album) {
-        switch (playlist.type) {
-            case "playlist":
-                console.log("Clicked Playlist", playlist.id);
-                break;
-            case "album":
-                console.log("Clicked Album", playlist.id);
-                break;
-            default:
-                console.warn("Unknown playlist type");
+        if(onItemClick) {
+            onItemClick(playlist);
         }
     }
 </script>
@@ -31,14 +25,18 @@
         <ChevronRight class="ml-auto"/>
     </Button>
 {/snippet}
-<ScrollArea
-        style="height: {height};"
-        class="flex w-full rounded-md p-4"
-        orientation="vertical">
-    <div class="flex flex-col w-full justify-items-start">
-        {#each playlists as playlist, index}
-            {@render Playlist(playlist, index === 0)}
-        {/each}
-    </div>
-</ScrollArea>
-
+<div class="flex flex-col justify-start {Class}">
+    {#if title}
+        <h1 class="text-3xl font-bold mb-1 ml-5">{title}</h1>
+    {/if}
+    <ScrollArea
+            style="height: {height};"
+            class="flex w-full rounded-md p-4"
+            orientation="vertical">
+        <div class="flex flex-col w-full justify-items-start">
+            {#each playlists as playlist, index}
+                {@render Playlist(playlist, index === 0)}
+            {/each}
+        </div>
+    </ScrollArea>
+</div>
