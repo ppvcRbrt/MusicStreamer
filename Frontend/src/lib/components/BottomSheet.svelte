@@ -76,6 +76,7 @@
             unlockScroll('bottom-sheet'); // or 'music-player' in MusicPlayer.svelte
         }
     });
+
     let blur = $derived(Math.min(swipe.progress * 10, 10));
     let elementOpacity = $derived(Math.max(1 - swipe.progress * 2, 0));
 
@@ -94,6 +95,7 @@
             handle: () => swipe.handle
         }}
             class="absolute bottom-0 left-0 right-0 z-20"
+            class:safe-area-top={swipe.isUp && isNativePlatform}
             style="
             transform: translateY({swipe.y.current}px);
             margin-bottom: -{windowInnerHeight}px;
