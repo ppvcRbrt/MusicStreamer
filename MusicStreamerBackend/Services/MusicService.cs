@@ -11,6 +11,7 @@ public interface IMusicService
     string? GetContentType(string filePath);
     List<ArtistDto> GetArtists();
     List<AlbumDto> GetAlbums();
+    List<AlbumDto> GetAlbums(int artistId);
 }
 public class MusicService : IMusicService
 {
@@ -19,7 +20,15 @@ public class MusicService : IMusicService
     {
         _dbContext = dbContext;
     }
-    
+
+    public List<AlbumDto> GetAlbums(int artistId)
+    {
+        return _dbContext.Albums
+            .Where(a => a.ArtistId == artistId)
+            .Include(a => a.Artist)
+            .Include(a => a.Tracks)
+            .Select(a => a.ToDto()).ToList();
+    }
     public List<AlbumDto> GetAlbums()
     {
         return _dbContext.Albums
@@ -29,7 +38,9 @@ public class MusicService : IMusicService
     }
     public List<ArtistDto> GetArtists()
     {
-        return _dbContext.Artists.Select(a => a.ToDto()).ToList();
+        return _dbContext.Artists
+            .Select(a => a.ToDto())
+            .ToList();
     }
     
     public FileStream? GetTrackFileStream(string filePath)

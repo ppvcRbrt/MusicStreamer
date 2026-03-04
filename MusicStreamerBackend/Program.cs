@@ -40,7 +40,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSvelteKit", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:4173", "http://robs-laptop:5173") // SvelteKit dev/preview ports
+        policy.AllowAnyOrigin() // Allow all origins
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
