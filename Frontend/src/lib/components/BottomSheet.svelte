@@ -8,6 +8,7 @@
     import Playlists from '$lib/components/Playlists.svelte';
     import { apiHttpService } from "$lib/services/apiHttpService";
     import { fly } from 'svelte/transition';
+    import { isNativePlatform } from '$lib/utils/platform';
 
     let windowInnerHeight = $state(browser ? window.innerHeight : 0);
     let sheetHeight = $state(0);
@@ -111,6 +112,7 @@
                     bind:this={swipe.handle}
                     bind:clientHeight={sheetHeight}
                     class="px-4 py-3 flex items-center gap-2 shrink-0"
+                    class:safe-area-top={swipe.isUp && isNativePlatform}
             >
                 <button
                         onclick={showTracks ? handleBack : () => swipe.onSwipe('down')}
@@ -169,3 +171,9 @@
         </div>
     </div>
 {/if}
+
+<style>
+    .safe-area-top {
+        padding-top: env(safe-area-inset-top);
+    }
+</style>
