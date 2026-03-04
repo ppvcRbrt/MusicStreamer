@@ -3,8 +3,8 @@ import { writable } from 'svelte/store';
 
 export type BottomSheetContent = {
     title: string;
-    items: App.Artist | App.Album;
-    type: 'artist' | 'album';
+    items?: App.Artist | App.Album;
+    type: 'artist' | 'album' | 'settings';
 } | null;
 
 export const bottomSheetState = writable<BottomSheetContent>(null);

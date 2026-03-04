@@ -9,6 +9,7 @@ declare global {
 		// interface Platform {}
 		interface Track {
 			id: number;
+			trackNumber: number;
 			title: string;
 			duration: number;
 			filePath: string;
@@ -34,6 +35,13 @@ declare global {
 			artist: Artist;
 			tracks: Track[];
 			type: 'album';
+		}
+
+		interface TrackStoreResult {
+			message: string;
+			tracksAdded: number;
+			artistsAdded: number;
+			albumsAdded: number;
 		}
 	}
 }

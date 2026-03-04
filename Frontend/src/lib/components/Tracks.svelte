@@ -6,10 +6,11 @@
 
     let { tracks, imageSize, height, imageSrc }:
         { tracks: App.Track[], imageSize: string, height: string, imageSrc?: string } = $props();
+    let tracksOrdered = $state(tracks.sort((a, b) => a.trackNumber - b.trackNumber));
     let currentlyPlayingTrackId = $derived($playerState.playList[$playerState.trackIndex]?.id ?? -1);
 
     function onTrackClick(trackIndex: number) {
-        $playerState.playList = tracks;
+        $playerState.playList = tracksOrdered;
         $playerState.trackIndex = trackIndex;
         $playerState.currentTime = 0;
         $playerState.isPlaying = true;
@@ -46,7 +47,7 @@
         class="flex w-full rounded-md p-4"
         orientation="vertical">
     <div class="flex flex-col w-full justify-items-start">
-        {#each tracks as track, index}
+        {#each tracksOrdered as track, index}
             {@render Track(track, index)}
         {/each}
     </div>

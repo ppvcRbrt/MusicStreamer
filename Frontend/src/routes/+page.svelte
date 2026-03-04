@@ -7,6 +7,8 @@
     import {ScrollArea} from "$lib/components/ui/scroll-area";
     import {openSheet} from "../bottomSheetState.svelte";
     import { isNativePlatform } from '$lib/utils/platform';
+    import { SettingsIcon } from "@lucide/svelte";
+    import {Button} from "$lib/components/ui/button";
 
     let { data }: { data: PageProps } = $props();
     let filteredTracks: App.Track[] = $state(data.tracks);
@@ -56,6 +58,15 @@
             items: albumWithTracks
         })
     }
+
+    function openSettingsMenu() {
+        openSheet({
+            type: "settings",
+            title: "Settings",
+            items: undefined
+        });
+    }
+
     function observeSection(node: HTMLElement, sectionName: string) {
         const viewport = document.querySelector('[data-radix-scroll-area-viewport]');
         const heading = node;
@@ -88,11 +99,18 @@
         </div>
     </div>
 
-    <div class="flex justify-center my-4 transition-all duration-300
+    <div class="flex justify-center my-4 transition-all duration-300 align-items-center
                 {scrolled ? 'opacity-0 h-0 overflow-hidden mt-0' : 'opacity-100'}">
-        <div class="sm:w-[50%] w-full px-2">
-            <Search bind:searchQuery Class="backdrop-blur-3xl bg-secondary/50"/>
+        <div class="flex flex-1 w-full justify-center">
+            <Search bind:searchQuery Class="backdrop-blur-3xl bg-secondary/50 sm:w-[50%]"/>
         </div>
+        <div class="flex flex-0 w-full justify-items-end align-center">
+            <Button variant="ghost" onclick={openSettingsMenu} class="mr-3">
+                Settings
+                <SettingsIcon/>
+            </Button>
+        </div>
+
     </div>
 
     <div id="artists-main" use:observeSection={"Artists"}>

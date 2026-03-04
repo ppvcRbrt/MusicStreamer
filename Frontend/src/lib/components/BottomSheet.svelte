@@ -10,6 +10,7 @@
     import { fly } from 'svelte/transition';
     import { isNativePlatform } from '$lib/utils/platform';
     import {lockScroll, unlockScroll} from "../../bodyOverflowState.svelte";
+    import SettingsMenu from "$lib/components/SettingsMenu.svelte";
 
     let windowInnerHeight = $state(browser ? window.innerHeight : 0);
     let sheetHeight = $state(0);
@@ -137,7 +138,7 @@
             <!-- Sliding content area -->
             <div class="flex-1 relative overflow-hidden">
 
-                <!-- Albums / Playlists view -->
+                <!-- Albums / Playlists / Settings View -->
                 {#if !showTracks}
                     <div
                             class="absolute inset-0 overflow-y-auto"
@@ -157,11 +158,13 @@
                             {/await}
                         {:else if $bottomSheetState?.type === 'album'}
                             <Tracks tracks={$bottomSheetState.items.tracks} imageSize="2.2em" height="88%"/>
+                        {:else if $bottomSheetState?.type === 'settings'}
+                            <SettingsMenu/>
                         {/if}
                     </div>
                 {/if}
 
-                <!-- Tracks view -->
+                <!-- Tracks view when clicking from album -->
                 {#if showTracks && selectedItem}
                     <div
                             class="absolute inset-0 overflow-y-auto"
@@ -171,7 +174,6 @@
                         <Tracks tracks={selectedItem.tracks} imageSize="2.2em" height="88%"/>
                     </div>
                 {/if}
-
             </div>
         </div>
     </div>
