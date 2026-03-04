@@ -72,10 +72,14 @@
 
 <ScrollArea
         class="h-full"
-        class:safe-area={isNativePlatform}
         onscrollcapture={handleScroll}>
-    <div class="sticky top-0 z-10 transition-all duration-300 bg-secondary/40 backdrop-blur-2xl
-                {scrolled ? 'py-2 shadow-md' : 'py-0 pointer-events-none opacity-0 h-0'}">
+    {#if isNativePlatform}
+        <div class="safe-area"></div>
+    {/if}
+    <div
+            class="sticky top-0 z-10 transition-all duration-300 bg-secondary/40 backdrop-blur-2xl
+            {scrolled ? 'py-2 shadow-md' : 'py-0 pointer-events-none opacity-0 h-0'}"
+            class:safe-area={isNativePlatform && scrolled}>
         <div class="flex items-center gap-3 px-4">
             <span class="font-semibold text-sm truncate flex-1">{currentSection}</span>
             <div class="w-[70%]">
@@ -102,8 +106,5 @@
 <style>
     .safe-area {
         padding-top: env(safe-area-inset-top);
-        padding-bottom: env(safe-area-inset-bottom);
-        padding-left: env(safe-area-inset-left);
-        padding-right: env(safe-area-inset-right);
     }
 </style>

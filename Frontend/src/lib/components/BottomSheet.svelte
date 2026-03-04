@@ -95,7 +95,6 @@
             handle: () => swipe.handle
         }}
             class="absolute bottom-0 left-0 right-0 z-20"
-            class:safe-area-top={swipe.isUp && isNativePlatform}
             style="
             transform: translateY({swipe.y.current}px);
             margin-bottom: -{windowInnerHeight}px;
