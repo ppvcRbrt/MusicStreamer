@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using MusicStreamerBackend.Data.EFModels.Music;
+using MusicStreamerBackend.Models.Scanning;
 using MusicStreamerBackend.Services;
 
 namespace MusicStreamerBackend.Controllers;
@@ -29,18 +30,18 @@ public class FileController : Controller
         }
     }
     
-    [HttpGet]
+    [HttpGet("loadLocalTracks")]
     public async Task<IActionResult> ScanMediaFolder()
     {
         try
         {
             var trackFiles = _fileService.ScanForTracks(_rootMediaFolder);
             var stored = await _dbStorageService.StoreTracks(trackFiles.ToList());
-            return Ok();
+            return Ok(stored);
         }
         catch (Exception ex)
         {
-            return StatusCode(500, $"Error scanning media folder");
+            return StatusCode(500, new TrackStoreResult() {Message = $"Error scanning media folder: {ex.Message}"});
         }
     }
     

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using MusicStreamerBackend.Data;
 using MusicStreamerBackend.Data.EFModels.Music;
 using MusicStreamerBackend.Helpers;
@@ -8,7 +9,7 @@ namespace MusicStreamerBackend.Services;
 
 public interface IDbStorageService
 {
-   Task<bool> StoreTracks(List<TrackFile> trackFiles);
+    Task<TrackStoreResult> StoreTracks(List<TrackFile> trackFiles);
 }
 public class DbStorageService : IDbStorageService
 {
@@ -20,36 +21,44 @@ public class DbStorageService : IDbStorageService
         _dbContext = dbContext;
     }
 
-    public async Task<bool> StoreTracks(List<TrackFile> trackFiles)
+    public async Task<TrackStoreResult> StoreTracks(List<TrackFile> trackFiles)
     {
-        var artists = BuildArtists(trackFiles);
-        _dbContext.Artists.AddRange(artists);
+        var newTracks = await GetTrackFilesNotStored(trackFiles);
+        var artists = BuildArtists(newTracks);
+        var newArtists = await GetArtistsNotStored(artists);
+        _dbContext.Artists.AddRange(newArtists);
         await _dbContext.SaveChangesAsync();
-        _logger.LogInformation("Stored tracks for {Artists} artists", artists.Count());
+        _logger.LogInformation("Stored Artist info for {ArtistsCount} artists", newArtists.Count());
         
         var albums = new List<AlbumEF>();
         foreach (var artist in artists)
         {
-            var artistAlbums = BuildAlbums(trackFiles, artist);
+            var artistAlbums = BuildAlbums(newTracks, artist);
             albums.AddRange(artistAlbums);
         }
-        _dbContext.Albums.AddRange(albums);
+        var newAlbums = await GetAlbumsNotStored(albums);
+        _dbContext.Albums.AddRange(newAlbums);
         await _dbContext.SaveChangesAsync();
         _logger.LogInformation("Stored albums for {Artists} artists", albums.Count());
         
         var tracks = new List<TrackEF>();
-        foreach (var album in albums)        
+        foreach (var album in newAlbums)
         {
-            var albumTracks = BuildTracks(trackFiles, album);
+            var albumTracks = BuildTracks(newTracks, album);
             tracks.AddRange(albumTracks);
-        }   
+        }
         _dbContext.Tracks.AddRange(tracks);
         await _dbContext.SaveChangesAsync();
         _logger.LogInformation("Stored {Tracks} tracks", tracks.Count());
-        
-        return true;
+        return new TrackStoreResult()
+        {
+            Message = "Successfully stored new tracks",
+            ArtistsAdded = newArtists.Count,
+            AlbumsAdded = newAlbums.Count,
+            TracksAdded = tracks.Count,
+        };
     }
-    
+
     private IEnumerable<TrackEF> BuildTracks(List<TrackFile> trackFiles, AlbumEF album)
     {
         var albumTracks = trackFiles.Where(t => t.Metadata.Album == album.Title);
@@ -58,6 +67,7 @@ public class DbStorageService : IDbStorageService
         {
             var track = new TrackEF()
             {
+                TrackNumber = trackFile.Metadata.TrackNumber,
                 FilePath = trackFile.Location,
                 ArtistId = album.ArtistId,
                 AlbumId = album.Id,
@@ -97,10 +107,30 @@ public class DbStorageService : IDbStorageService
             var artist = new ArtistEF()
             {
                 Name = artistName,
-            };    
+            };
             artists.Add(artist);
         }
         return artists;
     }
 
+    private async Task<List<AlbumEF>> GetAlbumsNotStored(List<AlbumEF> albums)
+    {
+        var storedAlbums = await _dbContext.Albums.Select(a => a.Title).ToListAsync();
+        var newAlbums = albums.Where(a => !storedAlbums.Contains(a.Title));
+        return newAlbums.ToList();
+    }
+    
+    private async Task<List<ArtistEF>> GetArtistsNotStored(IEnumerable<ArtistEF> artists)
+    {
+        var storedArtists = await _dbContext.Artists.Select(a  => a.Name).ToListAsync();
+        var newArtists = artists.Where(a => !storedArtists.Contains(a.Name));
+        return newArtists.ToList();
+    }
+    
+    private async Task<List<TrackFile>> GetTrackFilesNotStored(List<TrackFile> trackFiles)
+    {
+        var storedTracksFileNames = await _dbContext.Tracks.Select(t=>Path.GetFileName(t.FilePath)).ToListAsync();
+        var newTracks = trackFiles.Where(t => !storedTracksFileNames.Contains(Path.GetFileName(t.Location)));
+        return newTracks.ToList();  
+    }
 }
