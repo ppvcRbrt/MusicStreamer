@@ -17,12 +17,12 @@
 
     <Button variant="ghost" class="flex flex-row items-center justify-start p-2 w-full border-b rounded-none {first ? 'border-t' : ''}" size={imageSize} onclick={() => onPlaylistClick(playlist)}>
         {#if playlist.image}
-            <img src={playlist.image} alt={playlist.title} class="rounded-full" style="height: {imageSize}; width: {imageSize};"/>
+            <img src={playlist.image} alt={playlist.title} class="rounded-lg shrink-0" style="height: {imageSize}; width: {imageSize};"/>
         {:else}
-            <div class="bg-gray-200 rounded-lg" style="height: {imageSize}; width: {imageSize};" />
+            <div class="bg-gray-200 rounded-lg shrink-0" style="height: {imageSize}; width: {imageSize};" />
         {/if}
-        <p class="text-sm font-medium text-center">{playlist.title}</p>
-        <ChevronRight class="ml-auto"/>
+        <p class="text-sm font-medium truncate max-w-[60%]">{playlist.title}</p>
+        <ChevronRight class="ml-auto shrink-0"/>
     </Button>
 {/snippet}
 <div class="flex flex-col justify-start {Class}">
