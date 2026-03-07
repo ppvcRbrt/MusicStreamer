@@ -153,7 +153,10 @@ public class DbStorageService : IDbStorageService
     }
     private IEnumerable<ArtistEF> BuildArtists(List<TrackFile> trackFiles)
     {
-        var artistNames = trackFiles.Select(t => t.Metadata.Artist).Where(a => !string.IsNullOrEmpty(a)).Distinct();
+        var artistNames = trackFiles
+            .Select(t => t.Metadata.Artist)
+            .Where(a => !string.IsNullOrEmpty(a))        
+            .Distinct(StringComparer.OrdinalIgnoreCase);
         var artists = new List<ArtistEF>();
         foreach (var artistName in artistNames)
         {
@@ -168,8 +171,8 @@ public class DbStorageService : IDbStorageService
 
     private async Task<List<AlbumEF>> GetAlbumsNotStored(List<AlbumEF> albums)
     {
-        var storedAlbums = await _dbContext.Albums.Select(a => a.Title).ToListAsync();
-        var newAlbums = albums.Where(a => !storedAlbums.Contains(a.Title));
+        var storedAlbums = await _dbContext.Albums.Select(a => a.Title.ToLower()).ToListAsync();
+        var newAlbums = albums.Where(a => !storedAlbums.Contains(a.Title.ToLower()));
         return newAlbums.ToList();
     }
     
