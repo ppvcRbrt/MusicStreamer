@@ -122,8 +122,8 @@ public class DbStorageService : IDbStorageService
     
     private async Task<List<ArtistEF>> GetArtistsNotStored(IEnumerable<ArtistEF> artists)
     {
-        var storedArtists = await _dbContext.Artists.Select(a  => a.Name).ToListAsync();
-        var newArtists = artists.Where(a => !storedArtists.Contains(a.Name));
+        var storedArtists = await _dbContext.Artists.Select(a  => a.Name.ToLower()).ToListAsync();
+        var newArtists = artists.Where(a => !storedArtists.Contains(a.Name.ToLower()));
         return newArtists.ToList();
     }
     
