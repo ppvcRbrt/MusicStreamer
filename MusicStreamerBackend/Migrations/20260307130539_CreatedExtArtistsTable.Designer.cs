@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MusicStreamerBackend.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MusicStreamerBackend.Migrations
 {
     [DbContext(typeof(MusicStreamerDbContext))]
-    partial class MusicStreamerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260307130539_CreatedExtArtistsTable")]
+    partial class CreatedExtArtistsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -61,6 +64,9 @@ namespace MusicStreamerBackend.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
                     b.Property<string>("ImageUrl")
                         .HasColumnType("text");
 
@@ -71,25 +77,6 @@ namespace MusicStreamerBackend.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Artists");
-                });
-
-            modelBuilder.Entity("MusicStreamerBackend.Data.EFModels.Music.ExtAlbumEF", b =>
-                {
-                    b.Property<string>("ExtId")
-                        .HasColumnType("text");
-
-                    b.Property<int>("AlbumId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ServiceName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("ExtId");
-
-                    b.HasIndex("AlbumId");
-
-                    b.ToTable("ExtAlbums");
                 });
 
             modelBuilder.Entity("MusicStreamerBackend.Data.EFModels.Music.ExtArtistEF", b =>
@@ -165,17 +152,6 @@ namespace MusicStreamerBackend.Migrations
                     b.Navigation("Artist");
                 });
 
-            modelBuilder.Entity("MusicStreamerBackend.Data.EFModels.Music.ExtAlbumEF", b =>
-                {
-                    b.HasOne("MusicStreamerBackend.Data.EFModels.Music.AlbumEF", "Album")
-                        .WithMany("ExtIds")
-                        .HasForeignKey("AlbumId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Album");
-                });
-
             modelBuilder.Entity("MusicStreamerBackend.Data.EFModels.Music.ExtArtistEF", b =>
                 {
                     b.HasOne("MusicStreamerBackend.Data.EFModels.Music.ArtistEF", "Artist")
@@ -208,8 +184,6 @@ namespace MusicStreamerBackend.Migrations
 
             modelBuilder.Entity("MusicStreamerBackend.Data.EFModels.Music.AlbumEF", b =>
                 {
-                    b.Navigation("ExtIds");
-
                     b.Navigation("Tracks");
                 });
 

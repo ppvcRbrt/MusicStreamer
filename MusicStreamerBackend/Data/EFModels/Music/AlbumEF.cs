@@ -11,14 +11,15 @@ public class AlbumEF
     public int ArtistId { get; set; }
     [Required]
     public string Title { get; set; }
-    public string? Genre { get; set; }
     public string? ImageUrl { get; set; }
+    public string? Genre { get; set; }
     public int? Year { get; set; }
-    public int? DiscogsDbId { get; set; }
     
     [ForeignKey(nameof(ArtistId))]
     public ArtistEF Artist { get; set; }
     public ICollection<TrackEF>? Tracks { get; set; }
+    public ICollection<ExtAlbumEF>? ExtIds { get; set; }
+    
 
     public AlbumDto ToDto(bool includeTrackAlbums = false, bool includeTrackArtists = false)
     {

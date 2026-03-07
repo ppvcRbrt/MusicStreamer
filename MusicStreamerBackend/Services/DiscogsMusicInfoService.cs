@@ -15,12 +15,12 @@ public interface IMusicInfoService
     Task<DiscogsArtistInfo?> GetArtistInfo(string artistName);
 }
 
-public class MusicInfoService: IMusicInfoService
+public class DiscogsMusicInfoService: IMusicInfoService
 {
     private readonly HttpClient _discogsHttpClient;
-    private readonly ILogger<MusicInfoService> _logger;
+    private readonly ILogger<DiscogsMusicInfoService> _logger;
     
-    public MusicInfoService(IHttpClientFactory httpClientFactory, ILogger<MusicInfoService> logger)
+    public DiscogsMusicInfoService(IHttpClientFactory httpClientFactory, ILogger<DiscogsMusicInfoService> logger)
     {
         _logger = logger;
         _discogsHttpClient = httpClientFactory.CreateClient("Discogs");

@@ -1,22 +1,127 @@
+using System.Reflection.Metadata.Ecma335;
+using MusicStreamerBackend.Data;
 using MusicStreamerBackend.Data.EFModels.Music;
 using MusicStreamerBackend.Helpers;
 using MusicStreamerBackend.Models.Discogs;
 using MusicStreamerBackend.Models.Scanning;
+using SkiaSharp;
+using TagLib.Riff;
+using File = System.IO.File;
 
 namespace MusicStreamerBackend.Services;
 
 public interface IFileService
 {
     IEnumerable<TrackFile>? ScanForTracks(string rootFolderPath);
+    bool StoreAlbumCover(int albumId, byte[] coverData, string coverExtension);
+    List<int> GetStoredAlbumCoverIds();
+    void CreateAlbumCoverVariants(params int[] sizes);
 }
+
 public class FileService: IFileService
 {
     private readonly List<string> _fileTypes = new List<string> { ".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac" };
     private readonly ILogger<FileService> _logger;
-    
-    public FileService(ILogger<FileService> logger, IMusicInfoService musicInfoService)
+    private readonly string _rootCoverArtFolder;
+
+    public FileService(ILogger<FileService> logger, IConfiguration configuration)
     {
         _logger = logger;
+        _rootCoverArtFolder = configuration["CoverArtFolder"] ?? $"{configuration["MediaFolder"]}/CoverArt";
+    }
+    
+    public List<int> GetStoredAlbumCoverIds()
+    {
+        List<int> coverArtIds = new List<int>();
+        var coverArtFiles = Directory.GetFiles(_rootCoverArtFolder).Where(f => !Path.GetFileName(f).Contains('_'));
+        foreach (var coverArtFile in coverArtFiles)
+        {
+            var albumId = Path.GetFileNameWithoutExtension(coverArtFile);
+            coverArtIds.Add(int.Parse(albumId));
+        }
+        return coverArtIds;
+    }
+
+    public void CreateAlbumCoverVariants(params int[] sizes)
+    {
+        var coverFiles = Directory.GetFiles(_rootCoverArtFolder)    
+            .Where(f => !Path.GetFileName(f).Contains('_'))
+            .ToArray();
+
+        foreach (var coverFile in coverFiles)
+        {
+            using var original = SKBitmap.Decode(coverFile);
+            if (original == null)
+            {
+                _logger.LogWarning("Failed to decode image: {CoverFile}", coverFile);
+                continue;
+            }
+
+            foreach (var size in sizes)
+            {
+                string fileName = $"{Path.GetFileNameWithoutExtension(coverFile)}_{size}.jpg";
+                if (File.Exists(Path.Combine(_rootCoverArtFolder, fileName)))
+                {
+                    _logger.LogInformation("Skipping {Size}px variant for {CoverFile} - already exists", size, coverFile);
+                    continue;
+                }
+                if (original.Width <= size && original.Height <= size)
+                {
+                    _logger.LogInformation("Skipping {Size}px variant for {CoverFile} - original is smaller", size, coverFile);
+                    continue;
+                }
+
+                try
+                {
+                    using var resized = original.Resize(
+                        new SKImageInfo(size, size), 
+                        new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear));
+
+                    if (resized == null)
+                    {
+                        _logger.LogWarning("Failed to resize {CoverFile} to {Size}px", coverFile, size);
+                        continue;
+                    }
+
+                    using var image = SKImage.FromBitmap(resized);
+                    using var data = image.Encode(SKEncodedImageFormat.Jpeg, 85);
+                    var path = Path.Combine(_rootCoverArtFolder, fileName);
+                    using var stream = File.OpenWrite(path);
+                    data.SaveTo(stream);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to create {Size}px variant for {CoverFile}", size, coverFile);
+                }
+            }
+        }
+    }    
+    public bool StoreAlbumCover(int albumId, byte[] coverData, string coverExtension)
+    {
+        var coverPath = Path.Combine(_rootCoverArtFolder, $"{albumId}{coverExtension}");
+        if (coverData.Length == 0)
+        {
+            _logger.LogWarning("No cover data found for album: {AlbumName}", Path.GetFileName(coverPath));
+            return false;
+        }
+        if (!Directory.Exists(Path.GetDirectoryName(coverPath)))
+        {
+            _logger.LogWarning("No root directory found for cover art. Creating one at: {RootDirectory}", Path.GetDirectoryName(coverPath));
+            if (String.IsNullOrEmpty(Path.GetDirectoryName(coverPath)))
+            {
+                _logger.LogError("Invalid cover path: {CoverPath}.\nCover path should be absolute.", coverPath);
+                return false;
+            }
+            Directory.CreateDirectory(Path.GetDirectoryName(coverPath)!);
+        }
+        if (File.Exists(coverPath))
+        {
+            _logger.LogWarning("Cover art already exists for album: {AlbumName}", Path.GetFileName(coverPath));
+            return false;
+        }
+        _logger.LogInformation("Storing cover art for album: {AlbumName}", Path.GetFileName(coverPath));
+        File.WriteAllBytes(coverPath, coverData);
+        return true;
     }
     
     public IEnumerable<TrackFile>? ScanForTracks(string rootFolderPath)

@@ -1,6 +1,20 @@
 namespace MusicStreamerBackend.Helpers;
 public static class StringHelpers
 {
+    public static double Similarity(string? source, string? target, bool ignoreCase = true)
+    {
+        if (string.IsNullOrEmpty(source) && string.IsNullOrEmpty(target))
+            return 1.0;
+
+        if (string.IsNullOrEmpty(source) || string.IsNullOrEmpty(target))
+            return 0.0;
+
+        int maxLen = Math.Max(source.Length, target.Length);
+        int distance = LevenshteinDistance(source, target, ignoreCase);
+
+        return 1.0 - (double)distance / maxLen;
+    }
+
     /// <summary>
     /// Calculates the Levenshtein distance between two strings.
     /// Returns the minimum number of single-character edits (insertions, deletions, substitutions)

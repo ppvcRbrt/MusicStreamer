@@ -3,14 +3,19 @@ using MusicStreamerBackend.Data;
 using MusicStreamerBackend.Data.EFModels.Music;
 using MusicStreamerBackend.Helpers;
 using MusicStreamerBackend.Models.Discogs;
+using MusicStreamerBackend.Models.MusicBrainz;
 using MusicStreamerBackend.Models.Scanning;
 
 namespace MusicStreamerBackend.Services;
 
 public interface IDbStorageService
 {
-    Task<TrackStoreResult> StoreTracks(List<TrackFile> trackFiles);
+    Task<TrackStoreResult> StoreLocalTracks(List<TrackFile> trackFiles);
+    Task<int> StoreExternalArtistReferences(Dictionary<int, MusicBrainzArtist?> artists);
+    Task<int> StoreExternalAlbumReferences(Dictionary<int, MusicBrainzReleaseGroup> albums);
+    Task<bool> UpdateAlbumCoverImageUrl(AlbumEF album, string? coverImageUrl);
 }
+
 public class DbStorageService : IDbStorageService
 {
     private readonly ILogger<FileService> _logger;
@@ -21,7 +26,55 @@ public class DbStorageService : IDbStorageService
         _dbContext = dbContext;
     }
 
-    public async Task<TrackStoreResult> StoreTracks(List<TrackFile> trackFiles)
+    public async Task<bool> UpdateAlbumCoverImageUrl(AlbumEF album, string? coverImageUrl)
+    {
+        album.ImageUrl = coverImageUrl;
+        _dbContext.Albums.Update(album);
+        return await _dbContext.SaveChangesAsync() == 1;
+    }
+    
+    public async Task<int> StoreExternalAlbumReferences(Dictionary<int, MusicBrainzReleaseGroup> albums)
+    {
+        List<ExtAlbumEF> extAlbums = new List<ExtAlbumEF>();
+        foreach (var album in albums)
+        {
+            var extAlbum = new ExtAlbumEF()
+            {
+                ExtId = album.Value.Id,
+                AlbumId = album.Key,
+                ServiceName = "MusicBrainz",
+            };
+            extAlbums.Add(extAlbum);
+        }
+        _dbContext.ExtAlbums.AddRange(extAlbums);
+        int total = await _dbContext.SaveChangesAsync();
+        _logger.LogInformation("Stored {Count} external album references", total);
+        return total;
+    }
+    
+    public async Task<int> StoreExternalArtistReferences(Dictionary<int, MusicBrainzArtist?> artists)
+    {
+        List<ExtArtistEF> extArtists = new List<ExtArtistEF>();
+        foreach (var artist in artists)
+        {
+            if (artist.Value != null)
+            {
+                var extArtist = new ExtArtistEF()
+                {
+                    ExtId = artist.Value.Id,
+                    ArtistId = artist.Key,
+                    ServiceName = "MusicBrainz",
+                };
+                extArtists.Add(extArtist);
+            }
+        }
+        _dbContext.ExtArtists.AddRange(extArtists);
+        int total = await _dbContext.SaveChangesAsync();
+        _logger.LogInformation("Stored {Count} external artist references", total);
+        return total;
+    }
+    
+    public async Task<TrackStoreResult> StoreLocalTracks(List<TrackFile> trackFiles)
     {
         var newTracks = await GetTrackFilesNotStored(trackFiles);
         var artists = BuildArtists(newTracks);

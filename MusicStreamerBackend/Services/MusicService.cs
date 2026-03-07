@@ -12,6 +12,7 @@ public interface IMusicService
     List<ArtistDto> GetArtists();
     List<AlbumDto> GetAlbums();
     List<AlbumDto> GetAlbums(int artistId);
+    ArtistDto? GetArtistDetails(int artistId);
 }
 public class MusicService : IMusicService
 {
@@ -42,7 +43,13 @@ public class MusicService : IMusicService
             .Select(a => a.ToDto())
             .ToList();
     }
-    
+
+    public ArtistDto? GetArtistDetails(int artistId)
+    {
+        return _dbContext.Artists
+            .Find(artistId)?
+            .ToDto();
+    }
     public FileStream? GetTrackFileStream(string filePath)
     {
         if (!File.Exists(filePath))
