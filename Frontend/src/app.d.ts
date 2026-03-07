@@ -25,6 +25,8 @@ declare global {
 			id: number;
 			title: string;
 			image?: string;
+			imageSmall?: string;
+			imageLarge?: string;
 			tracks: Track[];
 			type: 'playlist';
 		}
@@ -32,6 +34,8 @@ declare global {
 			id: number;
 			title: string;
 			image?: string;
+			imageSmall?: string;
+			imageLarge?: string;
 			artist: Artist;
 			tracks: Track[];
 			type: 'album';
@@ -42,6 +46,22 @@ declare global {
 			tracksAdded: number;
 			artistsAdded: number;
 			albumsAdded: number;
+		}
+
+		interface MusicBrainzSearchResult {
+			created: string;
+			count: number;
+			offset: number
+			artists: MusicBrainzArtist[];
+		}
+
+		interface MusicBrainzArtist {
+			id: string;
+			type: string;
+			score: number;
+			name: string;
+			disambiguation?: string;
+			musicBrainzUrl: string;
 		}
 	}
 }

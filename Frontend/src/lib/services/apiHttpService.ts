@@ -17,7 +17,8 @@ class ApiHttpService {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        return response.json();
+        const text = await response.text();
+        return text ? JSON.parse(text) as T : undefined as T;
     }
 
     async get<T>(endpoint: string): Promise<T> {
@@ -25,12 +26,16 @@ class ApiHttpService {
     }
 
     async post<T>(endpoint: string, data: unknown): Promise<T> {
-        return this.request<T>(endpoint, {
+        return await this.request<T>(endpoint, {
             method: 'POST',
             body: JSON.stringify(data),
         });
     }
+    getBaseUrl(): string {
+        return this.baseUrl;
+    }
     getMediaResourceUrl(filepath: string): string {
         return `${this.baseUrl}/music/stream?filePath=${encodeURIComponent(filepath)}`;
     }}
+
 export const apiHttpService = new ApiHttpService();

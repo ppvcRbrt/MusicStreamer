@@ -11,12 +11,15 @@
     import { isNativePlatform } from '$lib/utils/platform';
     import {lockScroll, unlockScroll} from "../../bodyOverflowState.svelte";
     import SettingsMenu from "$lib/components/SettingsMenu.svelte";
+    import { ChevronLeftIcon } from "@lucide/svelte";
+    import ExternalMetadataPage from "$lib/components/ExternalMetadataPage.svelte";
 
     let windowInnerHeight = $state(browser ? window.innerHeight : 0);
     let sheetHeight = $state(0);
     let wasOpened = $state(false);
     let selectedItem = $state<App.Playlist | App.Album | null>(null);
     let showTracks = $state(false);
+    let showExternalMetadataMenu = $state(false);
 
     const swipe = new VerticalSpringSwipe(
         () => windowInnerHeight,
@@ -26,8 +29,12 @@
 
     function onHandleClick() {
         if (showTracks) {
-            handleBack();
-        } else {
+            handleBackTracks();
+        }
+        else if (showExternalMetadataMenu) {
+            handleBackExternalMetadata();
+        }
+        else {
             swipe.onSwipe('down');
         }
     }
@@ -48,9 +55,21 @@
         showTracks = true;
     }
 
-    function handleBack() {
+    function handleBackTracks() {
         showTracks = false;
         selectedItem = null;
+    }
+    function handleBackExternalMetadata() {
+        showExternalMetadataMenu = false;
+        if($bottomSheetState) {
+            $bottomSheetState.title = "Settings";
+        }
+    }
+    function handleExternalMetadataClick() {
+        showExternalMetadataMenu = true;
+        if($bottomSheetState) {
+            $bottomSheetState.title = "Settings  >  External Metadata";
+        }
     }
 
     $effect(() => {
@@ -62,7 +81,6 @@
 
     $effect(() => {
         if (wasOpened && !swipe.isUp && swipe.y.current >= -1) {
-            console.log("Closing sheet");
             wasOpened = false;
             showTracks = false;
             selectedItem = null;
@@ -121,14 +139,11 @@
                     class:safe-area-top={swipe.isUp && isNativePlatform}
             >
                 <button
-                        onclick={showTracks ? handleBack : () => swipe.onSwipe('down')}
+                        onclick={onHandleClick}
                         class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 transition-colors shrink-0"
                         aria-label="Go back"
                 >
-                    <!-- Left chevron icon -->
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="15 18 9 12 15 6" />
-                    </svg>
+                    <ChevronLeftIcon />
                 </button>
                 <h2 class="text-lg font-semibold flex-1" onclick={onHandleClick}>
                     {headerTitle}
@@ -139,7 +154,7 @@
             <div class="flex-1 relative overflow-hidden">
 
                 <!-- Albums / Playlists / Settings View -->
-                {#if !showTracks}
+                {#if !showTracks && !showExternalMetadataMenu}
                     <div
                             class="absolute inset-0 overflow-y-auto"
                             in:fly={{ x: -40, duration: 250 }}
@@ -157,9 +172,9 @@
                                 <p class="text-sm text-red-500 px-4">Failed to load albums.</p>
                             {/await}
                         {:else if $bottomSheetState?.type === 'album'}
-                            <Tracks tracks={$bottomSheetState.items.tracks} imageSize="2.2em" height="88%"/>
+                            <Tracks tracks={$bottomSheetState.items.tracks} showTrackNumbers={true} height="88%"/>
                         {:else if $bottomSheetState?.type === 'settings'}
-                            <SettingsMenu/>
+                            <SettingsMenu onExternalMetadataClick={handleExternalMetadataClick}/>
                         {/if}
                     </div>
                 {/if}
@@ -171,7 +186,18 @@
                             in:fly={{ x: 40, duration: 250 }}
                             out:fly={{ x: 40, duration: 200 }}
                     >
-                        <Tracks tracks={selectedItem.tracks} imageSize="2.2em" height="88%"/>
+                        <Tracks tracks={selectedItem.tracks} showTrackNumbers={true} height="88%"/>
+                    </div>
+                {/if}
+
+                <!-- External Metadata Menu -->
+                {#if showExternalMetadataMenu}
+                    <div
+                            class="absolute inset-0 overflow-y-auto w-full"
+                            in:fly={{ x: 40, duration: 250 }}
+                            out:fly={{ x: 40, duration: 200 }}
+                    >
+                        <ExternalMetadataPage/>
                     </div>
                 {/if}
             </div>

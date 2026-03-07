@@ -2,8 +2,10 @@
     import { Button } from "$lib/components/ui/button";
     import { Spinner } from "$lib/components/ui/spinner";
     import { apiHttpService } from "$lib/services/apiHttpService";
+    import { ChevronRightIcon } from "@lucide/svelte";
     import * as Dialog from "$lib/components/ui/dialog/index.js";
 
+    let { onExternalMetadataClick }: { onExternalMetadataClick?: () => void } = $props();
     let isLoadingLocalLibrary = $state(false);
     let isDialogOpen = $state(false);
     let dialogTitle = $state("");
@@ -24,6 +26,7 @@
             isLoadingLocalLibrary = false;
         }
     }
+
 </script>
 
 <div class="flex flex-col gap-2">
@@ -32,16 +35,16 @@
             <Spinner />
             Scanning local library...
         {:else}
-            Load local library
+            Load Local Library
         {/if}
     </Button>
-    <!-- This will require a signalr connection to get progress updates, so we'll implement it later -->
-    <Button variant="outline">
-        Find library artists on discogs
+    <Button class="relative flex w-full" variant="outline" onclick={onExternalMetadataClick}>
+        <span class="absolute left-1/2 -translate-x-1/2">External Metadata</span>
+        <ChevronRightIcon class="ml-auto" />
     </Button>
 </div>
 
-<Dialog.Root open={isDialogOpen}>
+<Dialog.Root bind:open={isDialogOpen}>
     <Dialog.Content>
         <Dialog.Header>
             <Dialog.Title>{dialogTitle}</Dialog.Title>

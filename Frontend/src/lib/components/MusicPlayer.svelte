@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Button } from "$lib/components/ui/button/index.js";
-    import { PlayIcon, ChevronLeftIcon, ChevronRightIcon, PauseIcon } from "@lucide/svelte";
+    import { PlayIcon, SkipBackIcon, SkipForwardIcon, PauseIcon } from "@lucide/svelte";
     import TrackCard from "$lib/components/TrackCard.svelte";
     import { playerState } from "../../musicPlayerState.svelte";
     import { Progress } from "$lib/components/ui/progress";
@@ -113,7 +113,7 @@
                 </div>
                 <div class="flex flex-shrink-0" style="filter: blur({blur}px);">
                     <Button variant="ghost" class="rounded-2xl my-auto" size="icon" style="height: 3em; width: 3em;" onclick={playPrevious} disabled={$playerState.trackIndex <= 0}>
-                        <ChevronLeftIcon style="height: 1.3em; width: 1.3em"/>
+                        <SkipBackIcon style="height: 1.3em; width: 1.3em"/>
                     </Button>
                     <Button variant="ghost" class="rounded-2xl my-auto" style="height: 5em; width: 5em;" onclick={togglePlay}>
                         {#if $playerState.isPlaying}
@@ -123,7 +123,7 @@
                         {/if}
                     </Button>
                     <Button variant="ghost" class="rounded-2xl my-auto" style="height: 3em; width: 3em;" onclick={playNext} disabled={$playerState.trackIndex >= $playerState.playList.length - 1}>
-                        <ChevronRightIcon style="height: 1.3em; width: 1.3em"/>
+                        <SkipForwardIcon style="height: 1.3em; width: 1.3em"/>
                     </Button>
                 </div>
             </div>

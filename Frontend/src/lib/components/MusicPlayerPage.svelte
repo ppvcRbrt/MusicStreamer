@@ -1,9 +1,10 @@
 <script lang="ts">
     import { Slider } from "$lib/components/ui/slider/index.js";
     import { type MusicPlayerState, playerState } from "../../musicPlayerState.svelte";
-    import {ChevronLeftIcon, ChevronRightIcon, PauseIcon, PlayIcon} from "@lucide/svelte";
-    import {playNext, playPrevious, togglePlay} from "../services/musicPlayerService.svelte";
-    import {Button} from "$lib/components/ui/button";
+    import { SkipBackIcon, SkipForwardIcon, PauseIcon, PlayIcon } from "@lucide/svelte";
+    import { playNext, playPrevious, togglePlay } from "../services/musicPlayerService.svelte";
+    import { Button } from "$lib/components/ui/button";
+    import {apiHttpService} from "$lib/services/apiHttpService";
 
     let { progress = $bindable()}: { progress: number} = $props();
 
@@ -14,6 +15,7 @@
     let displayTime = $state(0);
     let isSeeking = $state(false);
     let previousTrackIndex = $state($playerState.trackIndex);
+    let albumImageSrc = $state<string | null>(null);
 
     function startedDragging() {
         isDragging = true;
@@ -81,6 +83,22 @@
             isDragging = false;
             isSeeking = false;
             displayTime = 0;
+            console.log(currentTrack.album.image);
+        }
+    });
+    $effect(() => {
+        const large = currentTrack?.album?.imageLarge;
+        const small = currentTrack?.album?.image;
+        const base = apiHttpService.getBaseUrl();
+
+        albumImageSrc = null; // reset on track change
+
+        if (large) {
+            imageExists(`${base}${large}`).then(exists => {
+                albumImageSrc = exists ? `${base}${large}` : (small ? `${base}${small}` : null);
+            });
+        } else if (small) {
+            albumImageSrc = `${base}${small}`;
         }
     });
     function formatTime(seconds: number): string {
@@ -88,13 +106,18 @@
         const secs = Math.floor(seconds % 60);
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
-
+    async function imageExists(path: string): Promise<boolean> {
+        const res = await fetch(path, { method: "HEAD" });
+        if (res.ok) {
+            return res.ok;
+        }
+    }
 </script>
 
 <div class="flex flex-col w-full justify-center items-center" style="opacity: {elementOpacity}; filter: blur({blur}px);">
     <div>
-        {#if currentTrack?.album?.image}
-            <img src={ currentTrack?.album.image } class="rounded-lg" style="height: 16em; width: 16em;" />
+        {#if albumImageSrc}
+            <img src={albumImageSrc} class="rounded-lg" style="height: 16em; width: 16em;" />
         {:else}
             <div class="bg-gray-200 rounded-lg" style="height: 16em; width: 16em;" />
         {/if}
@@ -121,7 +144,7 @@
     </div>
     <div class="flex justify-center items-center gap-5 mt-4">
         <Button variant="ghost" class="rounded-2xl my-auto" size="icon" style="height: 3em; width: 3em;" onclick={playPrevious} disabled={$playerState.trackIndex <= 0}>
-            <ChevronLeftIcon style="height: 2.5em; width: 2.5em"/>
+            <SkipBackIcon style="height: 2em; width: 2em"/>
         </Button>
         <Button variant="ghost" class="rounded-2xl my-auto" style="height: 5em; width: 5em;" onclick={togglePlay}>
             {#if $playerState.isPlaying}
@@ -131,7 +154,7 @@
             {/if}
         </Button>
         <Button variant="ghost" class="rounded-2xl my-auto" style="height: 3em; width: 3em;" onclick={playNext} disabled={$playerState.trackIndex >= $playerState.playList.length - 1}>
-            <ChevronRightIcon style="height: 2.5em; width: 2.5em"/>
+            <SkipForwardIcon style="height: 2em; width: 2em"/>
         </Button>
     </div>
 </div>

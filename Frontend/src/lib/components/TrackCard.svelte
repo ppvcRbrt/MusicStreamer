@@ -1,5 +1,6 @@
 <script lang="ts">
     import {onMount} from "svelte";
+    import {apiHttpService} from "$lib/services/apiHttpService";
 
     let { track, onclick }: { track?: App.Track, onclick?: (e: MouseEvent) => void } = $props();
 
@@ -37,8 +38,8 @@
 
 <div class="flex flex-row w-full gap-3 items-center min-w-0 hover:cursor-pointer" {onclick}>
     <div class="flex-shrink-0">
-        {#if currentTrack.album.image}
-            <img src={currentTrack.album.image} class="rounded-lg" style="height: 3em; width: 3em;" />
+        {#if currentTrack.album.imageSmall}
+            <img src={`${apiHttpService.getBaseUrl()}${currentTrack.album.imageSmall}`} class="rounded-lg" style="height: 3em; width: 3em;" />
         {:else}
             <div class="bg-gray-200 rounded-lg" style="height: 3em; width: 3em;" />
         {/if}

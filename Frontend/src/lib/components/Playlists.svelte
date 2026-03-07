@@ -2,6 +2,7 @@
     import {ScrollArea} from "$lib/components/ui/scroll-area";
     import {Button} from "$lib/components/ui/button";
     import {ChevronRight} from "@lucide/svelte";
+    import {apiHttpService} from "$lib/services/apiHttpService";
 
     let { playlists, imageSize, height, title, Class="", onItemClick}:
         { playlists: App.Playlist[]|App.Album[], imageSize: string, height: string, title?: string, Class: string, onItemClick?: (itemType:App.Playlist|App.Album) => void} = $props();
@@ -16,8 +17,8 @@
 {#snippet Playlist(playlist: App.Playlist|App.Album, first: boolean = false)}
 
     <Button variant="ghost" class="flex flex-row items-center justify-start p-2 w-full border-b rounded-none {first ? 'border-t' : ''}" size={imageSize} onclick={() => onPlaylistClick(playlist)}>
-        {#if playlist.image}
-            <img src={playlist.image} alt={playlist.title} class="rounded-lg shrink-0" style="height: {imageSize}; width: {imageSize};"/>
+        {#if playlist.imageSmall}
+            <img src={`${apiHttpService.getBaseUrl()}${playlist.imageSmall}`} alt={playlist.title} class="rounded-lg shrink-0" style="height: {imageSize}; width: {imageSize};"/>
         {:else}
             <div class="bg-gray-200 rounded-lg shrink-0" style="height: {imageSize}; width: {imageSize};" />
         {/if}
