@@ -3,7 +3,20 @@
     import favicon from '$lib/assets/favicon.svg';
     import MusicPlayer from "$lib/components/MusicPlayer.svelte";
     import BottomSheet from "$lib/components/BottomSheet.svelte";
+    import {onMount} from "svelte";
     let { children } = $props();
+    import { getPreferredAudioQuality, onConnectionChange } from '$lib/utils/network';
+    import { userSettings } from "../settingsState.svelte";
+    import ServerErrorOverlay from "$lib/components/ServerErrorOverlay.svelte";
+
+    onMount(() => {
+        if ($userSettings.autoPreferredAudioFormat) {
+            $userSettings.preferredAudioFormat = getPreferredAudioQuality();
+            return onConnectionChange(() => {
+                $userSettings.preferredAudioFormat = getPreferredAudioQuality();
+            });
+        }
+    })
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
@@ -16,3 +29,4 @@
         <BottomSheet/>
     </div>
 </div>
+<ServerErrorOverlay />

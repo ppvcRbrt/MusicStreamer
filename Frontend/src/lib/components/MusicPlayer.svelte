@@ -11,9 +11,14 @@
     import { playNext, playPrevious, togglePlay } from "$lib/services/musicPlayerService.svelte";
     import { browser } from '$app/environment';
     import { isNativePlatform } from '$lib/utils/platform';
-    import {lockScroll, unlockScroll} from "../../bodyOverflowState.svelte";
+    import { lockScroll, unlockScroll } from "../../bodyOverflowState.svelte";
+    import { getTrackFile } from "$lib/utils/tracks";
+    import { userSettings } from "../../settingsState.svelte";
+    import {setupAnalyser} from "$lib/utils/audioAnalyser.svelte";
+    import {onMount} from "svelte";
 
     let playerHeight = $state(0);
+
     let windowInnerHeight = $state(browser ? window.innerHeight : 0);
     const swipe = new VerticalSpringSwipe(
         () => windowInnerHeight,
@@ -23,10 +28,37 @@
     let elementOpacity = $derived(Math.max(1 - swipe.progress * 2, 0));
 
     let currentTrack = $derived<App.Track>($playerState.playList[$playerState.trackIndex]);
-    let resourceUrl = $derived(apiHttpService.getMediaResourceUrl(currentTrack?.filePath ?? ''));
+
+    let resourceUrl = $derived(
+        apiHttpService.getMediaResourceUrl(getTrackFile(currentTrack, $userSettings.preferredAudioFormat))
+    );
     let currentTime = $derived($playerState?.currentTime ?? 0);
     let duration = $state(0);
     let seekApplied = false;
+    let audioAnalyzerInitialized = false;
+    let artworkMediaUrl = $state("");
+
+    async function checkImageExists(baseUrl: string, image): Promise<boolean> {
+        return await apiHttpService.imageExists(`${baseUrl}${image}`)
+    }
+
+    $effect(()  => {
+        const original = currentTrack?.album?.image;
+        const large = currentTrack?.album?.imageLarge;
+        const small = currentTrack?.album?.imageSmall;
+        const base = apiHttpService.getBaseUrl();
+        artworkMediaUrl = ""; // reset on track change
+
+        (async () => {
+            if (await checkImageExists(base, large)) {
+                artworkMediaUrl = `${base}${large}`;
+            } else if (await checkImageExists(base, original)) {
+                artworkMediaUrl = `${base}${original}`;
+            } else if (await checkImageExists(base, small)) {
+                artworkMediaUrl = `${base}${small}`;
+            }
+        })();
+    });
 
     function onTimeUpdate() {
         if (!$playerState.audioHandle?.duration) return; // not loaded yet, ignore
@@ -49,6 +81,13 @@
             title: currentTrack?.title,
             artist: currentTrack.artist.name,
             album: currentTrack.album?.title,
+            artwork: [
+                {
+                    src: artworkMediaUrl,
+                    sizes: '600x600',
+                    type: 'image/jpeg',
+                }
+            ],
         });
         navigator.mediaSession.setActionHandler("play", () => { $playerState.audioHandle!.play(); playerState.update(s => ({ ...s, isPlaying: true })); });
         navigator.mediaSession.setActionHandler("pause", () => { $playerState.audioHandle!.pause(); playerState.update(s => ({ ...s, isPlaying: false })); });
@@ -77,21 +116,33 @@
             unlockScroll('music-player');
         }
     });
+
+    function handleFirstPlay() {
+        if (!audioAnalyzerInitialized && $playerState.audioHandle) {
+            audioAnalyzerInitialized = true;
+            setupAnalyser($playerState.audioHandle);
+        }
+    }
 </script>
 
 <audio
+        crossorigin="anonymous"
         bind:this={$playerState.audioHandle}
         src={resourceUrl}
         ontimeupdate={onTimeUpdate}
         onloadedmetadata={onLoadedMetadata}
         onended={playNext}
-        onplay={() => $playerState.isPlaying = true}
+        onplay={() => {
+         $playerState.isPlaying = true;
+         handleFirstPlay();
+        }}
         onpause={() => $playerState.isPlaying = false}
         oncanplay={onCanPlay}
 />
 
 <div
         use:swipeable={{
+        axis: "horizontal",
         onDrag: (dy) => swipe.onDrag(dy),
         onRelease: () => swipe.onRelease(),
         handle: () => swipe.handle
@@ -132,7 +183,7 @@
             </div>
         </div>
         <div style="height: {windowInnerHeight - playerHeight + 25}px;">
-            <MusicPlayerPage bind:progress={swipe.progress}/>
+            <MusicPlayerPage bind:progress={swipe.progress} swipe={swipe}/>
         </div>
     </div>
 </div>

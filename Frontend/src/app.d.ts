@@ -7,12 +7,26 @@ declare global {
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}
+		interface TranscodingStatus {
+			lastError?: string;
+			state: "Idle" | "Running"
+			tracksFailed: number;
+			tracksProcessed: number;
+			tracksSkipped: number;
+		}
+		interface MetadataSyncStatus {
+			albumsMatched: number;
+			artistsProcessed: number;
+			coversFetched: number;
+			lastError?: string;
+			state: "Idle" | "Running";
+		}
 		interface Track {
 			id: number;
 			trackNumber: number;
 			title: string;
 			duration: number;
-			filePath: string;
+			filePaths: string[];
 			artist?: Artist;
 			album?: Album;
 		}
@@ -20,6 +34,8 @@ declare global {
 			id: number;
 			name: string;
 			image?: string;
+			imageSmall?: string;
+			imageLarge?: string;
 		}
 		interface Playlist {
 			id: number;

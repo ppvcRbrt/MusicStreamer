@@ -1,17 +1,24 @@
 export function swipeable(node: HTMLElement, callbacks: {
-    onSwipe?: (dir: 'up' | 'down') => void;
-    onDrag?: (dy: number) => void;
+    onSwipe?: (dir: 'up' | 'down' | 'left' | 'right') => void;
+    onDrag?: (dy: number, dx?: number) => void;
     onRelease?: () => void;
     threshold?: number;
     handle?: () => HTMLElement;
+    axis?: 'vertical' | 'horizontal' | 'both';
 }) {
+    let startX = 0;
     let startY = 0;
     let dragging = false;
     let currentCallbacks = callbacks;
 
+    function getAxis() {
+        return currentCallbacks.axis ?? 'vertical';
+    }
+
     function onTouchStart(e: TouchEvent) {
         const handle = currentCallbacks.handle?.();
-        if (handle && !handle.contains(e.target as Node)) return; // ignore if not in handle
+        if (handle && !handle.contains(e.target as Node)) return;
+        startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
         dragging = true;
     }
@@ -19,16 +26,36 @@ export function swipeable(node: HTMLElement, callbacks: {
     function onTouchMove(e: TouchEvent) {
         if (!dragging) return;
         e.preventDefault();
-        currentCallbacks.onDrag?.(e.touches[0].clientY - startY);
+        const dx = e.touches[0].clientX - startX;
+        const dy = e.touches[0].clientY - startY;
+        currentCallbacks.onDrag?.(dy, dx);
     }
 
     function onTouchEnd(e: TouchEvent) {
         if (!dragging) return;
         dragging = false;
+        const dx = e.changedTouches[0].clientX - startX;
         const dy = e.changedTouches[0].clientY - startY;
         currentCallbacks.onRelease?.();
-        if (Math.abs(dy) > (currentCallbacks.threshold ?? 50)) {
-            currentCallbacks.onSwipe?.(dy > 0 ? 'down' : 'up');
+
+        const axis = getAxis();
+        const threshold = currentCallbacks.threshold ?? 50;
+
+        if (axis === 'horizontal') {
+            if (Math.abs(dx) > threshold) {
+                currentCallbacks.onSwipe?.(dx > 0 ? 'right' : 'left');
+            }
+        } else if (axis === 'vertical') {
+            if (Math.abs(dy) > threshold) {
+                currentCallbacks.onSwipe?.(dy > 0 ? 'down' : 'up');
+            }
+        } else {
+            // 'both' — dominant axis wins
+            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > threshold) {
+                currentCallbacks.onSwipe?.(dx > 0 ? 'right' : 'left');
+            } else if (Math.abs(dy) > threshold) {
+                currentCallbacks.onSwipe?.(dy > 0 ? 'down' : 'up');
+            }
         }
     }
 

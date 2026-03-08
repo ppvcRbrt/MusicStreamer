@@ -17,7 +17,7 @@ public class AlbumEF
     
     [ForeignKey(nameof(ArtistId))]
     public ArtistEF Artist { get; set; }
-    public ICollection<TrackEF>? Tracks { get; set; }
+    public ICollection<TrackEF> Tracks { get; set; }
     public ICollection<ExtAlbumEF>? ExtIds { get; set; }
     
 

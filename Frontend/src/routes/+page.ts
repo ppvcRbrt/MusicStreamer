@@ -17,6 +17,7 @@ export const  load: PageLoad = async ({ params }) => {
                     album: album,
                     albumId: album.id
                 })));
+            console.log(tracks);
         }
         catch (error) {
             console.error('Error fetching music data:', error);

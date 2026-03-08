@@ -1,12 +1,19 @@
 <script lang="ts">
     import { Slider } from "$lib/components/ui/slider/index.js";
     import { type MusicPlayerState, playerState } from "../../musicPlayerState.svelte";
-    import { SkipBackIcon, SkipForwardIcon, PauseIcon, PlayIcon } from "@lucide/svelte";
+    import { SkipBackIcon, SkipForwardIcon, PauseIcon, PlayIcon, DiscAlbumIcon, ListMusicIcon } from "@lucide/svelte";
     import { playNext, playPrevious, togglePlay } from "../services/musicPlayerService.svelte";
     import { Button } from "$lib/components/ui/button";
-    import {apiHttpService} from "$lib/services/apiHttpService";
+    import { apiHttpService } from "$lib/services/apiHttpService";
+    import { Badge } from "$lib/components/ui/badge/index.js";
+    import { userSettings } from "../../settingsState.svelte";
+    import {closeSheet, openSheet, pageState, resetSheet, swipeState} from "../../bottomSheetState.svelte";
+    import type { VerticalSpringSwipe } from "$lib/actions/verticalSpringSwipe.svelte";
+    import { isNativePlatform } from "$lib/utils/platform";
+    import {audioAnalyser, blobPath, extractDominantColor} from '$lib/utils/audioAnalyser.svelte';
+    import { fade } from 'svelte/transition';
 
-    let { progress = $bindable()}: { progress: number} = $props();
+    let { progress = $bindable(), swipe }: { progress: number, swipe: VerticalSpringSwipe } = $props();
 
     let currentTrack = $derived<App.Track>($playerState.playList[$playerState.trackIndex]);
     let blur = $derived(Math.max(10 - progress * 10, 0)); // starts at 10, goes to 0
@@ -24,7 +31,6 @@
         displayTime = value;
         isSeeking = true;
         isDragging = false;
-        // $playerState.audioHandle?.pause();
     }
     function clickedSlider(value: number) {
         displayTime = value;
@@ -40,6 +46,39 @@
         if($playerState.audioHandle) {
             $playerState.audioHandle.currentTime = value;
             $playerState.isPlaying = true;
+        }
+    }
+    async function goToAlbum() {
+        if(currentTrack?.album) {
+            let tracks = await apiHttpService.get<App.Track[]>(`/music/albums/${currentTrack.album.id}/tracks`)
+            if(tracks.length > 0) {
+                let album = { ...currentTrack.album, tracks: tracks.map(t => ({ ...t, artist: currentTrack!.artist, album: { ...currentTrack!.album, tracks: [] } })) };
+                swipe.onSwipe("down");
+                resetSheet();
+                openSheet({
+                    type: "album",
+                    title: currentTrack!.album!.title,
+                    items: album as App.Album
+                });
+            }
+        }
+    }
+
+    function goToQueue() {
+        if($playerState.playList.length > 0) {
+            swipe.onSwipe("down");
+            resetSheet();
+            let playlist: App.Playlist = {
+                id : -1,
+                title: "Up Next",
+                type: "playlist",
+                tracks: $playerState.playList
+            }
+            openSheet({
+                type: "queue",
+                title: "Up Next",
+                items: playlist
+            });
         }
     }
 
@@ -76,6 +115,7 @@
             displayTime = $playerState?.audioHandle?.currentTime ?? 0;
         }
     });
+
     $effect(() => {
         const currentIndex = $playerState.trackIndex;
         if (currentIndex !== previousTrackIndex) {
@@ -86,36 +126,91 @@
             console.log(currentTrack.album.image);
         }
     });
-    $effect(() => {
+    $effect(()  => {
+        const original = currentTrack?.album?.image;
         const large = currentTrack?.album?.imageLarge;
-        const small = currentTrack?.album?.image;
+        const small = currentTrack?.album?.imageSmall;
         const base = apiHttpService.getBaseUrl();
-
         albumImageSrc = null; // reset on track change
 
-        if (large) {
-            imageExists(`${base}${large}`).then(exists => {
-                albumImageSrc = exists ? `${base}${large}` : (small ? `${base}${small}` : null);
-            });
-        } else if (small) {
-            albumImageSrc = `${base}${small}`;
+        (async () => {
+            if (await checkImageExists(base, large)) {
+                albumImageSrc = `${base}${large}`;
+            } else if (await checkImageExists(base, original)) {
+                albumImageSrc = `${base}${original}`;
+            } else if (await checkImageExists(base, small)) {
+                albumImageSrc = `${base}${small}`;
+            }
+        })();
+    });
+
+    $effect(() => {
+        if (albumImageSrc) {
+            extractDominantColor(albumImageSrc);
         }
     });
+
+    $effect(() => {
+        audioAnalyser.isPaused = progress < 1;
+    });
+    async function checkImageExists(baseUrl: string, image): Promise<boolean> {
+        return await apiHttpService.imageExists(`${baseUrl}${image}`)
+    }
+
     function formatTime(seconds: number): string {
         const mins = Math.floor(seconds / 60);
         const secs = Math.floor(seconds % 60);
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
-    async function imageExists(path: string): Promise<boolean> {
-        const res = await fetch(path, { method: "HEAD" });
-        if (res.ok) {
-            return res.ok;
-        }
-    }
 </script>
 
-<div class="flex flex-col w-full justify-center items-center" style="opacity: {elementOpacity}; filter: blur({blur}px);">
-    <div>
+<div class="flex flex-col w-full justify-center items-center will-change-[filter]"
+     style="opacity: {elementOpacity}; filter: blur({blur}px);">
+    <div class="relative flex justify-center items-center overflow-visible"
+         style="height: 16em; width: 16em; margin: 0 auto;"
+         class:mt-3={isNativePlatform}>
+        {#if !audioAnalyser.isPaused}
+            {@const bins = audioAnalyser.bins}
+            {@const t = audioAnalyser.time}
+
+            <svg
+                    class="absolute pointer-events-none"
+                    style="z-index: -1; width: 32em; height: 32em; filter: blur(10px);"
+                    viewBox="-1.5 -1.5 3 3"
+            >
+                <defs>
+                    <radialGradient id="glow1">
+                        <stop offset="0%" stop-color="rgba({audioAnalyser.glowColor}, 0.7)" />
+                        <stop offset="70%" stop-color="rgba({audioAnalyser.glowColor}, 0.2)" />
+                        <stop offset="100%" stop-color="rgba({audioAnalyser.glowColor}, 0)" />
+                    </radialGradient>
+                    <radialGradient id="glow2">
+                        <stop offset="0%" stop-color="rgba({audioAnalyser.glowColorWarm}, 0.5)" />
+                        <stop offset="70%" stop-color="rgba({audioAnalyser.glowColorWarm}, 0.15)" />
+                        <stop offset="100%" stop-color="rgba({audioAnalyser.glowColorWarm}, 0)" />
+                    </radialGradient>
+                    <radialGradient id="glow3">
+                        <stop offset="0%" stop-color="rgba({audioAnalyser.glowColorCool}, 0.4)" />
+                        <stop offset="70%" stop-color="rgba({audioAnalyser.glowColorCool}, 0.1)" />
+                        <stop offset="100%" stop-color="rgba({audioAnalyser.glowColorCool}, 0)" />
+                    </radialGradient>
+                </defs>
+
+                <path
+                        d={blobPath(bins, 1.1, t * 0.7, 0.4)}
+                        fill="url(#glow1)"
+                />
+                <path
+                        d={blobPath(bins.map((_, i) => bins[(i + 5) % 16]), 0.9, t * 1.1, 0.35)}
+                        fill="url(#glow2)"
+                />
+                <path
+                        d={blobPath(bins.map((_, i) => bins[(i + 10) % 16]), 0.7, t * 1.6, 0.3)}
+                        fill="url(#glow3)"
+                />
+            </svg>
+        {/if}
+
         {#if albumImageSrc}
             <img src={albumImageSrc} class="rounded-lg" style="height: 16em; width: 16em;" />
         {:else}
@@ -124,6 +219,7 @@
     </div>
     <p class="text-lg font-medium mt-4">{currentTrack?.title ?? "Unknown Track"}</p>
     <p class="text-sm opacity-50">{currentTrack?.artist.name ?? "Unknown Artist"}</p>
+    <Badge variant="outline" class="mt-2">{$userSettings.preferredAudioFormat}</Badge>
     <div class="flex flex-col w-full justify-center items-center">
         <Slider
                 class="w-11/12 mt-7 **:data-[slot=slider-track]:h-2 **:data-[slot=slider-thumb]:size-5"
@@ -156,5 +252,16 @@
         <Button variant="ghost" class="rounded-2xl my-auto" style="height: 3em; width: 3em;" onclick={playNext} disabled={$playerState.trackIndex >= $playerState.playList.length - 1}>
             <SkipForwardIcon style="height: 2em; width: 2em"/>
         </Button>
+    </div>
+    <div class="flex flex-row mt-5 justify-center items-center gap-2">
+        <Button variant="ghost" class="rounded-2xl" onclick={goToAlbum}>
+            <DiscAlbumIcon style="height: 2em; width: 2em"/>
+            Album
+        </Button>
+        <Button variant="ghost" class="rounded-2xl" onclick={goToQueue}>
+            <ListMusicIcon style="height: 2em; width: 2em"/>
+            Queue
+        </Button>
+
     </div>
 </div>

@@ -7,10 +7,15 @@
     import { Skeleton } from "$lib/components/ui/skeleton/index.js";
     import { CheckIcon } from "@lucide/svelte";
     import * as Dialog from "$lib/components/ui/dialog/index.js";
+    import {onMount} from "svelte";
     interface SelectedArtist {
         artist: App.Artist;
         searchResult: App.MusicBrainzSearchResult;
     }
+    interface SyncStatus {
+        metadata: App.MetadataSyncStatus;
+    }
+
     let artistsMessage = $state("Disambiguate the artists using the MusicBrainz Results");
     let searchingArtists = $state(false);
     let artistPickerOpen = $state(false);
@@ -18,6 +23,7 @@
     let artists = $state<Record<number, App.MusicBrainzSearchResult>>({});
     let disambiguatedArtists = $state<Record<number, App.MusicBrainzArtist>>({});
     let selectedArtist = $state<SelectedArtist>();
+    let syncStatus = $state<SyncStatus | null>(null);
 
     async function searchArtists() {
         searchingArtists = true;
@@ -49,6 +55,23 @@
         disambiguatedArtists = {};
         artistsMessage = result;
     }
+
+    async function triggerAlbumSync() {
+        await apiHttpService.get("/externalMetadata/triggerAlbumSync");
+        syncStatus = await apiHttpService.get<SyncStatus>('/externalMetadata/sync/status');
+    }
+
+    $effect(() => {
+        const interval = setInterval(async () => {
+            syncStatus = await apiHttpService.get<SyncStatus>('/externalMetadata/sync/status');
+        }, 2000);
+
+        return () => clearInterval(interval);
+    });
+    onMount(async () => {
+        syncStatus = await apiHttpService.get<SyncStatus>('/externalMetadata/sync/status');
+    });
+
 </script>
 
 <div class="flex flex-col gap-2 mx-2">
@@ -106,6 +129,17 @@
             onclick={submitDisambiguatedArtists}
             disabled={(Object.keys(disambiguatedArtists).length !== Object.keys(artists).length) || (Object.keys(artists).length === 0)}>
         Submit Disambiguated Artists
+    </Button>
+    <Button class="relative overflow-hidden"
+            variant="outline"
+             disabled={syncStatus?.metadata?.state === "Running"}
+            onclick={triggerAlbumSync}>
+        Trigger Album Metadata Sync
+        <div class="w-full absolute bottom-0 h-0.5 rounded-full
+                {syncStatus?.metadata.state === 'Running' ? 'bg-amber-500 animate-pulse' : ''}
+                {syncStatus?.metadata.state === 'Idle' ? 'bg-emerald-500 animate-pulse' : ''}"
+        />
+
     </Button>
 </div>
 

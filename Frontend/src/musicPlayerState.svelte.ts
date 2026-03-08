@@ -9,7 +9,7 @@ export type MusicPlayerState = {
     playList: App.Track[];
     audioHandle?: HTMLAudioElement | null;
 };
-type PersistedState = Pick<MusicPlayerState, 'trackIndex' | 'playList' | 'currentTime'>;
+type PersistedState = Pick<MusicPlayerState, 'trackIndex' | 'playList' | 'currentTime' >;
 const STORAGE_KEY = 'musicPlayerState';
 
 function loadPersistedState(): Partial<PersistedState> {

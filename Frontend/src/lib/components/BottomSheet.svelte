@@ -3,39 +3,36 @@
     import { VerticalSpringSwipe } from '$lib/actions/verticalSpringSwipe.svelte';
     import { swipeable } from '$lib/actions/gestures.svelte';
     import { browser } from '$app/environment';
-    import { bottomSheetState, closeSheet } from '../../bottomSheetState.svelte';
+    import { bottomSheetState, closeSheet, pageState, resetSheet, swipeState } from '../../bottomSheetState.svelte';
     import Tracks from '$lib/components/Tracks.svelte';
     import Playlists from '$lib/components/Playlists.svelte';
     import { apiHttpService } from "$lib/services/apiHttpService";
     import { fly } from 'svelte/transition';
     import { isNativePlatform } from '$lib/utils/platform';
-    import {lockScroll, unlockScroll} from "../../bodyOverflowState.svelte";
+    import { lockScroll, unlockScroll } from "../../bodyOverflowState.svelte";
     import SettingsMenu from "$lib/components/SettingsMenu.svelte";
     import { ChevronLeftIcon } from "@lucide/svelte";
     import ExternalMetadataPage from "$lib/components/ExternalMetadataPage.svelte";
+    import { playerState } from "../../musicPlayerState.svelte";
 
     let windowInnerHeight = $state(browser ? window.innerHeight : 0);
     let sheetHeight = $state(0);
-    let wasOpened = $state(false);
-    let selectedItem = $state<App.Playlist | App.Album | null>(null);
-    let showTracks = $state(false);
-    let showExternalMetadataMenu = $state(false);
 
-    const swipe = new VerticalSpringSwipe(
+    swipeState.instance = new VerticalSpringSwipe(
         () => windowInnerHeight,
         () => 0,
         windowInnerHeight / 2
     );
 
     function onHandleClick() {
-        if (showTracks) {
+        if (pageState.showTracks) {
             handleBackTracks();
         }
-        else if (showExternalMetadataMenu) {
+        else if (pageState.showExternalMetadataMenu) {
             handleBackExternalMetadata();
         }
         else {
-            swipe.onSwipe('down');
+            swipeState.instance.onSwipe('down');
         }
     }
 
@@ -45,77 +42,75 @@
 
     function handlePlaylistItemClick(item: App.Playlist | App.Album) {
         if(item.type === 'album') {
-            selectedItem = item;
+            pageState.selectedItem = item;
             let albumWithoutTracks = { ...item, tracks: [] };
-            selectedItem.tracks.map((t => {
+            pageState.selectedItem.tracks.map((t => {
                 t.artist = item.artist
                 t.album = albumWithoutTracks;
             }));
         }
-        showTracks = true;
+        pageState.showTracks = true;
     }
 
     function handleBackTracks() {
-        showTracks = false;
-        selectedItem = null;
+        pageState.showTracks = false;
+        pageState.selectedItem = null;
     }
     function handleBackExternalMetadata() {
-        showExternalMetadataMenu = false;
+        pageState.showExternalMetadataMenu = false;
         if($bottomSheetState) {
             $bottomSheetState.title = "Settings";
         }
     }
     function handleExternalMetadataClick() {
-        showExternalMetadataMenu = true;
+        pageState.showExternalMetadataMenu = true;
         if($bottomSheetState) {
             $bottomSheetState.title = "Settings  >  External Metadata";
         }
     }
-
     $effect(() => {
-        if ($bottomSheetState && !wasOpened) {
-            swipe.onSwipe('up');
-            wasOpened = true;
+        if ($bottomSheetState && !pageState.wasOpened) {
+            swipeState.instance.onSwipe('up');
+            pageState.wasOpened = true;
         }
     });
 
     $effect(() => {
-        if (wasOpened && !swipe.isUp && swipe.y.current >= -1) {
-            wasOpened = false;
-            showTracks = false;
-            selectedItem = null;
+        if (pageState.wasOpened && !swipeState.instance.isUp && swipeState.instance.y.current >= -1) {
+            resetSheet();
             closeSheet();
         }
     });
 
     $effect(() => {
-        if (swipe.isUp) {
+        if (swipeState.instance.isUp) {
             lockScroll('bottom-sheet'); // or 'music-player' in MusicPlayer.svelte
         } else {
             unlockScroll('bottom-sheet'); // or 'music-player' in MusicPlayer.svelte
         }
     });
 
-    let blur = $derived(Math.min(swipe.progress * 10, 10));
-    let elementOpacity = $derived(Math.max(1 - swipe.progress * 2, 0));
+    let blur = $derived(Math.min(swipeState.instance.progress * 10, 10));
+    let elementOpacity = $derived(Math.max(1 - swipeState.instance.progress * 2, 0));
 
     let headerTitle = $derived(
-        showTracks && selectedItem
-            ? selectedItem.title ?? ''
+        pageState.showTracks && pageState.selectedItem
+            ? pageState.selectedItem.title ?? ''
             : $bottomSheetState?.title ?? ''
     );
 </script>
 
-{#if $bottomSheetState || swipe.isUp}
+{#if $bottomSheetState || swipeState.instance.isUp}
     <div
             use:swipeable={{
-            onDrag: (dy) => swipe.onDrag(dy),
-            onRelease: () => swipe.onRelease(),
-            handle: () => swipe.handle
+            axis: "horizontal",
+            onDrag: (dy) => swipeState.instance.onDrag(dy),
+            onRelease: () => swipeState.instance.onRelease(),
+            handle: () => swipeState.instance.handle
         }}
             class="absolute bottom-0 left-0 right-0 z-20"
             style="
-            transform: translateY({swipe.y.current}px);
+            transform: translateY({swipeState.instance.y.current}px);
             margin-bottom: -{windowInnerHeight}px;
             position: relative;
         "
@@ -133,10 +128,10 @@
         >
             <!-- Header / drag handle -->
             <div
-                    bind:this={swipe.handle}
+                    bind:this={swipeState.instance.handle}
                     bind:clientHeight={sheetHeight}
                     class="px-4 py-3 flex items-center gap-2 shrink-0"
-                    class:safe-area-top={swipe.isUp && isNativePlatform}
+                    class:safe-area-top={swipeState.instance.isUp && isNativePlatform}
             >
                 <button
                         onclick={onHandleClick}
@@ -153,8 +148,8 @@
             <!-- Sliding content area -->
             <div class="flex-1 relative overflow-hidden">
 
-                <!-- Albums / Playlists / Settings View -->
-                {#if !showTracks && !showExternalMetadataMenu}
+                <!-- Albums / Playlists / Queue / Settings View -->
+                {#if !pageState.showTracks && !pageState.showExternalMetadataMenu}
                     <div
                             class="absolute inset-0 overflow-y-auto"
                             in:fly={{ x: -40, duration: 250 }}
@@ -172,26 +167,30 @@
                                 <p class="text-sm text-red-500 px-4">Failed to load albums.</p>
                             {/await}
                         {:else if $bottomSheetState?.type === 'album'}
-                            <Tracks tracks={$bottomSheetState.items.tracks} showTrackNumbers={true} height="88%"/>
+                            {#key $bottomSheetState.items.tracks}
+                                <Tracks tracks={$bottomSheetState.items.tracks} showTrackNumbers={true} height="88%"/>
+                            {/key}
                         {:else if $bottomSheetState?.type === 'settings'}
                             <SettingsMenu onExternalMetadataClick={handleExternalMetadataClick}/>
+                        {:else if $bottomSheetState?.type === 'queue'}
+                            <Tracks tracks={$playerState.playList} showTrackNumbers={false} isQueue={true} imageSize="2.2em" height="88%"/>
                         {/if}
                     </div>
                 {/if}
 
                 <!-- Tracks view when clicking from album -->
-                {#if showTracks && selectedItem}
+                {#if pageState.showTracks && pageState.selectedItem}
                     <div
                             class="absolute inset-0 overflow-y-auto"
                             in:fly={{ x: 40, duration: 250 }}
                             out:fly={{ x: 40, duration: 200 }}
                     >
-                        <Tracks tracks={selectedItem.tracks} showTrackNumbers={true} height="88%"/>
+                        <Tracks tracks={pageState.selectedItem.tracks} showTrackNumbers={true} height="88%"/>
                     </div>
                 {/if}
 
                 <!-- External Metadata Menu -->
-                {#if showExternalMetadataMenu}
+                {#if pageState.showExternalMetadataMenu}
                     <div
                             class="absolute inset-0 overflow-y-auto w-full"
                             in:fly={{ x: 40, duration: 250 }}

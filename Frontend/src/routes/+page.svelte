@@ -94,12 +94,12 @@
         <div class="flex items-center gap-3 px-4">
             <span class="font-semibold text-sm truncate flex-1">{currentSection}</span>
             <div class="w-[70%]">
-                <Search bind:searchQuery />
+                <Search bind:searchQuery/>
             </div>
         </div>
     </div>
 
-    <div class="flex justify-center my-4 transition-all duration-300 align-items-center
+    <div class="flex justify-center my-4 transition-all duration-300 align-items-center ml-2
                 {scrolled ? 'opacity-0 h-0 overflow-hidden mt-0' : 'opacity-100'}">
         <div class="flex flex-1 w-full justify-center">
             <Search bind:searchQuery Class="backdrop-blur-3xl bg-secondary/50 sm:w-[50%]"/>
