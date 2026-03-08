@@ -13,9 +13,10 @@ public interface IExternalMetadataService
     Task<Dictionary<int, MusicBrainzSearchResult?>> FindArtistsMissingExternalMetadata(int maxResults = 5);
     Task<Dictionary<int, MusicBrainzReleaseGroup>?> FindAlbumsMissingReleaseGroups(int dbArtistId);
     Task<int> StoreMissingCoverArt();
+    Task<int> SetArtistImagesAsAlbum();
 }
 
-public class ExternalMetadataService: IExternalMetadataService
+public class ExternalMetadataService : IExternalMetadataService
 {
     private readonly MusicStreamerDbContext _dbContext;
     private readonly IMusicBrainzService _musicBrainzService;
@@ -23,10 +24,10 @@ public class ExternalMetadataService: IExternalMetadataService
     private readonly ILogger<ExternalMetadataController> _logger;
     private readonly IDbStorageService _dbStorageService;
     private readonly string _coverArtRootPath;
-    
+
     public ExternalMetadataService(
-        MusicStreamerDbContext dbContext, 
-        IMusicBrainzService musicBrainzService, 
+        MusicStreamerDbContext dbContext,
+        IMusicBrainzService musicBrainzService,
         ILogger<ExternalMetadataController> logger,
         IFileService fileService,
         IDbStorageService dbStorageService,
@@ -39,8 +40,21 @@ public class ExternalMetadataService: IExternalMetadataService
         _dbStorageService = dbStorageService;
         _coverArtRootPath = configuration["CoverArtRootPath"] ?? "/covers";
     }
-    
-    public async Task<Dictionary<int, MusicBrainzSearchResult?>> FindArtistsMissingExternalMetadata(int maxResults = 5)
+
+    public async Task<int> SetArtistImagesAsAlbum()
+    {
+        var artists = _dbContext
+            .Artists
+            .Include(a => a.Albums);
+        foreach (var artist in artists)
+        {
+            artist.ImageUrl = artist.Albums?.FirstOrDefault()?.ImageUrl;
+        }
+        int totalSaved = await _dbContext.SaveChangesAsync();
+        return totalSaved;
+    }
+
+public async Task<Dictionary<int, MusicBrainzSearchResult?>> FindArtistsMissingExternalMetadata(int maxResults = 5)
     {
         var artistsWithoutExtMetadata = await _dbContext.Artists
             .Include(a => a.ExtIds) 
@@ -146,7 +160,7 @@ public class ExternalMetadataService: IExternalMetadataService
         _logger.LogInformation("Stored cover art for {Count} albums", totalStored);
         
         _logger.LogInformation("Creating cover art variants");
-        _fileService.CreateAlbumCoverVariants(150, 300);
+        _fileService.CreateAlbumCoverVariants(150, 600);
         _logger.LogInformation("Created cover art variants");
         return totalStored;
     }

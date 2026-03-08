@@ -18,6 +18,10 @@ builder.Services.AddSingleton<AlbumMetadataSyncService>();
 builder.Services.AddSingleton<IAlbumMetadataSyncService>(p => p.GetRequiredService<AlbumMetadataSyncService>());
 builder.Services.AddHostedService(p => p.GetRequiredService<AlbumMetadataSyncService>());
 
+builder.Services.AddSingleton<TranscodingService>();
+builder.Services.AddSingleton<ITranscodingService>(sp => sp.GetRequiredService<TranscodingService>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<TranscodingService>());
+
 builder.Services.AddDbContext<MusicStreamerDbContext>(options =>
 {
     options.UseNpgsql(builder.Configuration.GetConnectionString("MusicStreamerDb"));
@@ -79,7 +83,12 @@ if (!string.IsNullOrEmpty(builder.Configuration["CoverArtFolder"]) && !string.Is
     app.UseStaticFiles(new StaticFileOptions
     {
         FileProvider = new PhysicalFileProvider(builder.Configuration["CoverArtFolder"]!),
-        RequestPath = builder.Configuration["CoverArtRootPath"]
+        RequestPath = builder.Configuration["CoverArtRootPath"],
+        OnPrepareResponse = ctx =>
+        {
+            ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+            ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+        }
     });    
 }
 

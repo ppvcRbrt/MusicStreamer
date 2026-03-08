@@ -13,6 +13,7 @@ public interface IMusicService
     List<AlbumDto> GetAlbums();
     List<AlbumDto> GetAlbums(int artistId);
     ArtistDto? GetArtistDetails(int artistId);
+    List<TrackDto> GetTracksByAlbumId(int albumId);
 }
 public class MusicService : IMusicService
 {
@@ -22,12 +23,24 @@ public class MusicService : IMusicService
         _dbContext = dbContext;
     }
 
+    public List<TrackDto> GetTracksByAlbumId(int albumId)
+    {
+        return _dbContext.Albums
+            .Include(a=> a.Tracks)
+            .ThenInclude(t => t.AltFormats)
+            .Where(a => a.Id == albumId)
+            .SelectMany(a => a.Tracks)
+            .Select(t => t.ToDto())
+            .ToList();
+        
+    }
     public List<AlbumDto> GetAlbums(int artistId)
     {
         return _dbContext.Albums
             .Where(a => a.ArtistId == artistId)
             .Include(a => a.Artist)
             .Include(a => a.Tracks)
+            .ThenInclude(a => a.AltFormats)
             .Select(a => a.ToDto()).ToList();
     }
     public List<AlbumDto> GetAlbums()
@@ -35,11 +48,13 @@ public class MusicService : IMusicService
         return _dbContext.Albums
             .Include(a => a.Artist)
             .Include(a => a.Tracks)
+            .ThenInclude(a => a.AltFormats)
             .Select(a => a.ToDto()).ToList();
     }
     public List<ArtistDto> GetArtists()
     {
         return _dbContext.Artists
+            .Include(a => a.Albums)
             .Select(a => a.ToDto())
             .ToList();
     }
@@ -75,6 +90,8 @@ public class MusicService : IMusicService
                 return "audio/flac";
             case ".aac":
                 return "audio/aac";
+            case ".opus":
+                return "audio/ogg";
             default:
                 return null;
         }

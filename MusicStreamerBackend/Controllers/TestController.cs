@@ -35,11 +35,18 @@ public class TestController : Controller
         await albumMetadataSyncService.TriggerSync(CancellationToken.None);
         return Ok();
     }
+
+    [HttpGet("triggerTranscoding")]
+    public async Task<IActionResult> TriggerTranscoding(ITranscodingService transcodingService)
+    {
+        await transcodingService.TriggerSync(CancellationToken.None);
+        return Ok();   
+    }
     
     [HttpGet("coverArt")]
     public async Task<IActionResult> GetCoverArt(IFileService fileService)
     {
-        fileService.CreateAlbumCoverVariants(150, 300);
+        fileService.CreateAlbumCoverVariants(150, 600);
         return Ok();
     }
 }

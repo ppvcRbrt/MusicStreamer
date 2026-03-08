@@ -14,6 +14,7 @@ public interface IDbStorageService
     Task<int> StoreExternalArtistReferences(Dictionary<int, MusicBrainzArtist?> artists);
     Task<int> StoreExternalAlbumReferences(Dictionary<int, MusicBrainzReleaseGroup> albums);
     Task<bool> UpdateAlbumCoverImageUrl(AlbumEF album, string? coverImageUrl);
+    Task<bool> AddNewAltTrackFormat(TrackAltFormatsEF trackAltFormats);
 }
 
 public class DbStorageService : IDbStorageService
@@ -24,6 +25,17 @@ public class DbStorageService : IDbStorageService
     {
         _logger = logger;
         _dbContext = dbContext;
+    }
+    
+    public async Task<bool> AddNewAltTrackFormat(TrackAltFormatsEF trackAltFormats)
+    {
+        bool alreadyExists = await _dbContext.TrackAltFormats.AnyAsync(t => t.TrackId == trackAltFormats.TrackId && t.Format == trackAltFormats.Format);
+        if (!alreadyExists)
+        {
+            _dbContext.TrackAltFormats.Add(trackAltFormats);
+            return await _dbContext.SaveChangesAsync() == 1;    
+        }
+        return false;
     }
 
     public async Task<bool> UpdateAlbumCoverImageUrl(AlbumEF album, string? coverImageUrl)
@@ -122,6 +134,7 @@ public class DbStorageService : IDbStorageService
             {
                 TrackNumber = trackFile.Metadata.TrackNumber,
                 FilePath = trackFile.Location,
+                Format = StringHelpers.ExtensionToFormat(trackFile.Extensions),
                 ArtistId = album.ArtistId,
                 AlbumId = album.Id,
                 Title = trackFile.Metadata.Title,

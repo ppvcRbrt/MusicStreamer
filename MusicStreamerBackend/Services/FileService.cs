@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Reflection.Metadata.Ecma335;
 using MusicStreamerBackend.Data;
 using MusicStreamerBackend.Data.EFModels.Music;
@@ -16,11 +17,12 @@ public interface IFileService
     bool StoreAlbumCover(int albumId, byte[] coverData, string coverExtension);
     List<int> GetStoredAlbumCoverIds();
     void CreateAlbumCoverVariants(params int[] sizes);
+    Task<string> TranscodeToOpus(string inputPath, string outputPath, CancellationToken ct);
 }
 
 public class FileService: IFileService
 {
-    private readonly List<string> _fileTypes = new List<string> { ".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac" };
+    private readonly List<string> _fileTypes = [".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac"];
     private readonly ILogger<FileService> _logger;
     private readonly string _rootCoverArtFolder;
 
@@ -28,6 +30,51 @@ public class FileService: IFileService
     {
         _logger = logger;
         _rootCoverArtFolder = configuration["CoverArtFolder"] ?? $"{configuration["MediaFolder"]}/CoverArt";
+    }
+    
+    
+    public async Task<string> TranscodeToOpus(string inputPath, string outputPath, CancellationToken ct)
+    {
+        var tempPath = $"{outputPath}.tmp";
+        try
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "ffmpeg",
+                    ArgumentList =
+                    {
+                        "-i", inputPath,
+                        "-c:a", "libopus",
+                        "-b:a", "128k",
+                        "-vn",
+                        "-f", "ogg",
+                        "-y",
+                        tempPath
+                    },
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+            process.Start();
+            var stderr = await process.StandardError.ReadToEndAsync(ct);
+            await process.WaitForExitAsync(ct);
+
+            if (process.ExitCode != 0)
+                throw new Exception($"ffmpeg exited with code {process.ExitCode}: {stderr}");
+
+            File.Move(tempPath, outputPath);
+            return outputPath;
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
     }
     
     public List<int> GetStoredAlbumCoverIds()

@@ -47,6 +47,12 @@ public class MusicController : Controller
         return Ok(_musicService.GetAlbums());
     }
 
+    [HttpGet("albums/{albumId}/tracks")]
+    public IActionResult GetAlbumTracks(int albumId)
+    {
+        return Ok(_musicService.GetTracksByAlbumId(albumId));
+    }
+
     [HttpGet("artist/{artistId}")]
     public IActionResult GetArtistDetails(int artistId)
     {

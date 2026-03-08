@@ -67,6 +67,7 @@ public class AlbumMetadataSyncService : BackgroundService, IAlbumMetadataSyncSer
             }
         
             int total = await metadataService.StoreMissingCoverArt();
+            int toatlImagesStored = await metadataService.SetArtistImagesAsAlbum();
             
             _state = "Idle";
             _logger.LogInformation("Album metadata sync completed");

@@ -6,7 +6,7 @@ public class TrackDto
     public int TrackNumber { get; set; }
     public string Title { get; set; }
     public TimeSpan Duration { get; set; }
-    public string FilePath { get; set; }
+    public List<string> FilePaths { get; set; }
     public ArtistDto? Artist { get; set; }
     public AlbumDto? Album { get; set; }
 }

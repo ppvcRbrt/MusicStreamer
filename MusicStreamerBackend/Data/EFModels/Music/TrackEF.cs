@@ -12,6 +12,7 @@ public class TrackEF
     public string Title { get; set; }
     [Required]
     public string FilePath { get; set; }
+    public string Format { get; set; }
     public int TrackNumber { get; set; }
     public TimeSpan? Duration { get; set; }
     public string? Genre { get; set; }
@@ -23,15 +24,22 @@ public class TrackEF
     public AlbumEF? Album { get; set; }
     [ForeignKey(nameof(ArtistId))]
     public ArtistEF? Artist { get; set; }
+    public ICollection<TrackAltFormatsEF>? AltFormats { get; set; }
 
-    public TrackDto? ToDto(bool includeArtist = true, bool includeAlbum = true)
+    public TrackDto ToDto(bool includeArtist = true, bool includeAlbum = true)
     {
+        var altFormats = AltFormats?.Select(a => a.FilePath).ToList();
+        List<string> filePaths = [FilePath];
+        if (altFormats != null)
+        {
+            filePaths.AddRange(altFormats);
+        }
         var dto = new TrackDto()
         {
             Id = Id,
             TrackNumber =  TrackNumber,
             Title = Title,
-            FilePath =  FilePath,
+            FilePaths = filePaths,
             Duration = Duration ?? TimeSpan.Zero,
         };
         if (includeAlbum)

@@ -33,4 +33,22 @@ public class ExternalMetadataController : Controller
         
         return Ok($"Stored {totalStored} artist references");
     }
+
+    [HttpGet("triggerAlbumSync")]
+    public async Task<IActionResult> TriggerAlbumSync(IAlbumMetadataSyncService albumMetadataSyncService)
+    {
+        await albumMetadataSyncService.TriggerSync(CancellationToken.None);
+        return Ok();   
+    }
+
+    [HttpGet("sync/status")]
+    public IActionResult GetSyncStatus(IAlbumMetadataSyncService albumMetadataSyncService, ITranscodingService transcodingService)
+    {
+        return Ok(new
+        {
+            metadata = albumMetadataSyncService.GetStatus(),
+            transcoding = transcodingService.GetStatus()
+        });
+    }
+
 }

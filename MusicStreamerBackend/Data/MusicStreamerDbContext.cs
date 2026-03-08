@@ -12,4 +12,5 @@ public class MusicStreamerDbContext : DbContext
     public DbSet<TrackEF> Tracks { get; set; }
     public DbSet<ExtArtistEF> ExtArtists { get; set; }
     public DbSet<ExtAlbumEF> ExtAlbums { get; set; }
+    public DbSet<TrackAltFormatsEF> TrackAltFormats { get; set; }
 }

@@ -22,7 +22,7 @@ public class FileController : Controller
         _fileService = fileService;
         // _musicInfoService = musicInfoService;
         _dbStorageService = dbStorageService;
-        _rootMediaFolder = configuration["MediaLocation"];
+        _rootMediaFolder = configuration["MediaFolder"];
         if (_rootMediaFolder == null)
         {
             _logger.LogError("Media folder not configured");
@@ -30,6 +30,13 @@ public class FileController : Controller
         }
     }
     
+    [HttpGet("triggerTranscoding")]
+    public async Task<IActionResult> TriggerTranscoding(ITranscodingService transcodingService)
+    {
+        await transcodingService.TriggerSync(CancellationToken.None);
+        return Ok();   
+    }
+
     [HttpGet("loadLocalTracks")]
     public async Task<IActionResult> ScanMediaFolder()
     {
@@ -37,7 +44,7 @@ public class FileController : Controller
         {
             var trackFiles = _fileService.ScanForTracks(_rootMediaFolder);
             _logger.LogInformation("Storing track files, total: {TrackFileCount}", trackFiles.Count());
-            var stored = await _dbStorageService.StoreTracks(trackFiles.ToList());
+            var stored = await _dbStorageService.StoreLocalTracks(trackFiles.ToList());
             return Ok(stored);
         }
         catch (Exception ex)

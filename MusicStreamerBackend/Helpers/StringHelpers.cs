@@ -1,6 +1,18 @@
 namespace MusicStreamerBackend.Helpers;
 public static class StringHelpers
 {
+    public static string ExtensionToFormat(string extension) => extension.TrimStart('.').ToLowerInvariant() switch
+    {
+        "mp3"  => "MP3",
+        "flac" => "FLAC",
+        "wav"  => "WAV",
+        "ogg"  => "Vorbis",
+        "opus" => "Opus",
+        "m4a"  => "AAC",
+        "aac"  => "AAC",
+        _ => extension?.TrimStart('.').ToUpperInvariant() ?? "Unknown"
+    };
+
     public static double Similarity(string? source, string? target, bool ignoreCase = true)
     {
         if (string.IsNullOrEmpty(source) && string.IsNullOrEmpty(target))
