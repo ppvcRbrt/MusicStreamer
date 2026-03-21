@@ -1,39 +1,86 @@
 <script lang="ts">
-    import {onMount} from "svelte";
     import {apiHttpService} from "$lib/services/apiHttpService";
 
     let { track, onclick }: { track?: App.Track, onclick?: (e: MouseEvent) => void } = $props();
 
     let containerRef: HTMLDivElement | null = $state(null);
     let textRef: HTMLSpanElement | null = $state(null);
+    let separatorRef: HTMLSpanElement | null = $state(null);
     let shouldScroll = $state(false);
+    let animation: Animation | null = null;
+
+    function startAnimation() {
+        if (!textRef || !separatorRef) return;
+        animation?.cancel();
+
+        // Exact scroll distance: first title width + separator width
+        const scrollDistance = textRef.scrollWidth + separatorRef.scrollWidth;
+        const duration = (scrollDistance / 40) * 1000; // ms, 40px/s
+        const pauseRatio = Math.min(1000 / duration, 0.2); // pause ~1s but max 20% of total
+
+        animation = textRef.closest('.marquee-track')!.animate(
+            [
+                { transform: 'translateX(0)', offset: 0 },
+                { transform: 'translateX(0)', offset: pauseRatio },
+                { transform: `translateX(-${scrollDistance}px)`, offset: 1 - pauseRatio },
+                { transform: `translateX(-${scrollDistance}px)`, offset: 1 },
+            ],
+            {
+                duration: duration + 4000, // extra time accounts for both pauses
+                iterations: Infinity,
+                easing: 'linear',
+                delay: 1500,
+            }
+        );
+    }
 
     $effect(() => {
-        if (containerRef && textRef) {
-            const ro = new ResizeObserver(() => {
-                shouldScroll = textRef!.scrollWidth > containerRef!.clientWidth;
-            });
-            ro.observe(containerRef);
-            return () => ro.disconnect();
+        if (!containerRef || !textRef) return;
+
+        const ro = new ResizeObserver(() => {
+            shouldScroll = textRef!.scrollWidth > containerRef!.clientWidth;
+            if (!shouldScroll) {
+                animation?.cancel();
+                animation = null;
+            }
+        });
+        ro.observe(containerRef);
+        return () => {
+            ro.disconnect();
+            animation?.cancel();
+        };
+    });
+
+    // Start animation once second copy + separator are in the DOM
+    $effect(() => {
+        if (shouldScroll && separatorRef) {
+            // Wait a tick for the DOM to settle
+            requestAnimationFrame(() => startAnimation());
         }
     });
 
-    let duration = $derived(textRef ? textRef.scrollWidth / 30 : 10);
+    // Reset animation when track changes
+    $effect(() => {
+        currentTrack.title; // track the dependency
+        animation?.cancel();
+        animation = null;
+        shouldScroll = false;
+
+        // Force re-check since ResizeObserver won't fire if container size didn't change
+        requestAnimationFrame(() => {
+            if (containerRef && textRef) {
+                shouldScroll = textRef.scrollWidth > containerRef.clientWidth;
+            }
+        });
+    });
+
     let currentTrack = $derived(track ?? {
         id: 0,
         title: "Unknown Track",
         duration: 0,
-        artist: {
-            id: 0,
-            name: "Unknown Artist"
-        },
-        album: {
-            id: 0,
-            title: "Unknown Album",
-            image: null
-        }
+        artist: { id: 0, name: "Unknown Artist" },
+        album: { id: 0, title: "Unknown Album", image: null }
     });
-
 </script>
 
 <div class="flex flex-row w-full gap-3 items-center min-w-0 hover:cursor-pointer" {onclick}>
@@ -46,16 +93,12 @@
     </div>
     <div class="flex flex-col min-w-0 flex-1">
         <div class="marquee" bind:this={containerRef}>
-            <div
-                    class="marquee-track"
-                    class:scrolling={shouldScroll}
-                    style:animation-duration="{duration}s"
-            >
+            <div class="marquee-track">
                 <span class="text-sm font-medium whitespace-nowrap text-start" bind:this={textRef}>
                     {currentTrack.title}
                 </span>
                 {#if shouldScroll}
-                    <span class="separator text-sm opacity-30">•</span>
+                    <span class="separator text-sm opacity-30" bind:this={separatorRef}>•</span>
                     <span class="text-sm font-medium whitespace-nowrap text-start">
                         {currentTrack.title}
                     </span>
@@ -82,22 +125,5 @@
 
     .separator {
         padding: 0 1rem;
-    }
-
-    .scrolling {
-        animation: marquee linear infinite;
-    }
-
-    .scrolling:hover {
-        animation-play-state: paused;
-    }
-
-    @keyframes marquee {
-        0% {
-            transform: translateX(0);
-        }
-        100% {
-            transform: translateX(-50%);
-        }
     }
 </style>
