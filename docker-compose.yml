@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
     environment:
       - MediaLocation=/music
+      - ConnectionStrings__MusicStreamerDb=Host=postgres:5432; Database=musicStreamerDb; Username=admin; Password=adminpassword                                                                                                                                                                                               
     ports:
       - "8080:8080"
     restart: unless-stopped

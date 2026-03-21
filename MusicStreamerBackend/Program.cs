@@ -58,6 +58,13 @@ builder.Services.AddRequestTimeouts(options =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<MusicStreamerDbContext>();
+    db.Database.Migrate();
+}
+
 app.UseCors("AllowSvelteKit");
 
 if (app.Environment.IsDevelopment())
