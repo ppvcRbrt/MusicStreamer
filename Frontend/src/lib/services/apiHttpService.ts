@@ -1,8 +1,10 @@
 import {setServerError} from "../../errorState.svelte";
+import { PUBLIC_API_URL } from '$env/static/public';
+
 class ApiHttpService {
     private readonly baseUrl:string;
     constructor() {
-        this.baseUrl = `http://robs-laptop:5277`;
+        this.baseUrl = PUBLIC_API_URL;
     }
 
     private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
