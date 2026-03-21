@@ -46,3 +46,46 @@ The settings menu ties the frontend and backend together, providing access to se
 - **Audio Analyzer (Animation when track is playing):** Only triggers if user is on the track's page. If on iOS and started a song this way background listening breaks. As a workaround you can close and re-open the capacitor app and then play the song through the bottom widget.
 - **File is being requested directly when streaming audio:** When a user requests a song for range streaming from the server, it requests based on a file path. This was done to avoid lag when changing songs. This is a bad pattern and should be fixed, ideally by utilizing track ids rather than file path. It is currently mitigated by running everything on a tailscale network.
 - **Capacitor app expires after 1 week:** If publishing the application as a capacitor app, due to how apple handles developer certificates, it expires after a week. That doesn't really bother me but beware if you are on a free apple developer account. There is also the PWA option but you lose haptic feedback and some performance.
+
+## Getting Started
+
+### Prerequisites
+- [Docker](https://docs.docker.com/get-docker/) & Docker Compose (for containerized setup)
+- Or for local development:
+  - [.NET 10 SDK](https://dotnet.microsoft.com/download)
+  - [Node.js](https://nodejs.org/en/download) (v18+)
+  - [PostgreSQL 17](https://www.postgresql.org/download)
+  - [FFmpeg](https://ffmpeg.org/)
+
+### Docker (Recommended)
+1. Clone the repository
+2. Update `MusicStreamerBackend/appsettings.json` with your media folder path:
+   ```json
+   {
+     "MediaFolder": "/path/to/your/music",
+     "CoverArtFolder": "/path/to/your/music/AlbumArt"
+   }
+   ```
+3. Update the volume mount in `docker-compose.yml` to point to your music directory
+4. Run `docker compose up` — database migrations are applied automatically on startup
+5. The backend API will be available at `http://localhost:8080`
+
+### Local Development
+1. Clone the repository
+2. Start PostgreSQL on port `5442` and update the connection string in `appsettings.Development.json`.
+3. Create a database called `musicStreamerDb`
+4. Update `MusicStreamerBackend/appsettings.json` with your media folder path
+5. Start the backend:
+   ```bash
+   cd MusicStreamerBackend
+   dotnet restore && dotnet run
+   ```
+6. Start the frontend:
+   ```bash
+   cd Frontend
+   npm install && npm run dev
+   ```
+## Tech Stack
+
+**Frontend:** SvelteKit / Svelte 5, Tailwind CSS, TypeScript, Capacitor (iOS)  
+**Backend:** ASP.NET Core (.NET 10), Entity Framework Core, PostgreSQL 17, FFmpeg, TagLibSharp, SkiaSharp
