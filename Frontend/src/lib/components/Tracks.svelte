@@ -28,24 +28,35 @@
             hapticHeavy();
         }
     }
+
     function handleRemoveAddFromQueue(track: App.Track) {
         if (isTrackInQueue(track)) {
             if (track.id === currentlyPlayingTrackId) {
                 $playerState.isPlaying = false;
                 $playerState.currentTime = 0;
             }
+
+            const removedIndex = $playerState.playList.findIndex(t => t.id === track.id);
             $playerState.playList = $playerState.playList.filter(t => t.id !== track.id);
+
+            if (removedIndex < $playerState.trackIndex) {
+                $playerState.trackIndex = $playerState.trackIndex - 1;
+            }
+
             if ($playerState.trackIndex >= $playerState.playList.length) {
                 $playerState.trackIndex = Math.max(0, $playerState.playList.length - 1);
             }
+
             if (isQueue) {
                 tracksOrdered = $playerState.playList;
             }
         }
         else {
-            $playerState.playList = [...$playerState.playList, track];
+            const trackToAdd = { ...track, trackNumber: $playerState.playList.length + 1 };
+            $playerState.playList = [...$playerState.playList, trackToAdd];
         }
     }
+
     function isTrackInQueue(track: App.Track) {
         return $playerState.playList.some(t => t.id === track.id);
     }
