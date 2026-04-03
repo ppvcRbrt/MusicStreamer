@@ -24,7 +24,8 @@ public enum ContextType
     Album,
     Artist,
     Playlist,
-    Recommendation
+    Recommendation,
+    Player
 }
 
 public class ListeningEventEF

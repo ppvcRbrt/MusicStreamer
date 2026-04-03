@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MusicStreamerBackend.Migrations
 {
     [DbContext(typeof(MusicStreamerDbContext))]
-    [Migration("20260403174639_AddedListeningEventTable")]
+    [Migration("20260403183415_AddedListeningEventTable")]
     partial class AddedListeningEventTable
     {
         /// <inheritdoc />

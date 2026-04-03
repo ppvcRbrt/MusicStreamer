@@ -1,15 +1,17 @@
 <script lang="ts">
-    import { ScrollArea } from "$lib/components/ui/scroll-area";
-    import { Button } from "$lib/components/ui/button";
-    import { ListMinusIcon, ListPlusIcon } from "@lucide/svelte";
-    import { playerState } from "../../musicPlayerState.svelte";
-    import { apiHttpService } from "$lib/services/apiHttpService";
-    import { HorizontalSpringSwipe } from "$lib/actions/horizontalSpringSwipe.svelte";
-    import { swipeable } from '$lib/actions/gestures.svelte';
-    import { flip } from "svelte/animate";
-    import { slide } from "svelte/transition";
-    import {hapticHeavy, hapticLight, hapticMedium} from "$lib/utils/haptics";
-
+    import {ScrollArea} from "$lib/components/ui/scroll-area";
+    import {Button} from "$lib/components/ui/button";
+    import {ListMinusIcon, ListPlusIcon} from "@lucide/svelte";
+    import {playerState} from "../../musicPlayerState.svelte";
+    import {apiHttpService} from "$lib/services/apiHttpService";
+    import {HorizontalSpringSwipe} from "$lib/actions/horizontalSpringSwipe.svelte";
+    import {swipeable} from '$lib/actions/gestures.svelte';
+    import {flip} from "svelte/animate";
+    import {slide} from "svelte/transition";
+    import {hapticHeavy, hapticLight} from "$lib/utils/haptics";
+    import {logEvent} from "$lib/services/listeningEventService.ts";
+    import {ContextType, ListeningEventType} from "$lib/utils/enums.ts";
+    import {getCurrentContext} from "../../bottomSheetState.svelte.ts";
 
     let { tracks, imageSize, height, showTrackNumbers=false, isQueue=false }:
         { tracks: App.Track[], imageSize: string, height: string, showTrackNumbers?:boolean } = $props();
@@ -29,8 +31,16 @@
         }
     }
 
+
     function handleRemoveAddFromQueue(track: App.Track) {
         if (isTrackInQueue(track)) {
+            logEvent(
+                track.id,
+                0,
+                0,
+                ListeningEventType.QueueRemove,
+                getCurrentContext()
+            )
             if (track.id === currentlyPlayingTrackId) {
                 $playerState.isPlaying = false;
                 $playerState.currentTime = 0;
@@ -54,6 +64,13 @@
         else {
             const trackToAdd = { ...track, trackNumber: $playerState.playList.length + 1 };
             $playerState.playList = [...$playerState.playList, trackToAdd];
+            logEvent(
+                track.id,
+                0,
+                0,
+                ListeningEventType.QueueRemove,
+                getCurrentContext()
+            )
         }
     }
 

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using MusicStreamerBackend.Data;
 
 namespace MusicStreamerBackend.Services;
@@ -18,6 +19,11 @@ public class UserService : IUserService
     
     public async Task<bool> StoreUserListeningEvent(UserListeningEventDto eventDtoData)
     {
+        var trackExists = await _dbContext.Tracks.AnyAsync(t => t.Id == eventDtoData.TrackId);
+        if (!trackExists)
+        {
+            return false;
+        }
         _dbContext.ListeningEvents.Add(eventDtoData.ToEF());
         return (await _dbContext.SaveChangesAsync()) == 1;
     }
