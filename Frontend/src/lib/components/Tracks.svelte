@@ -178,10 +178,10 @@
                     {/if}
                 </Button>
 
-                <div class="w-full">
+                <div class="w-full min-w-0">
                     <Button
                             variant="ghost"
-                            class="flex flex-row items-center gap-2 py-6 w-full rounded-none
+                            class="flex flex-row items-center gap-2 py-6 w-full rounded-none min-w-0
                                 {track.id === currentlyPlayingTrackId ? 'bg-primary/10 hover:bg-primary/15 border-l-2 border-l-primary py-6' : ''}"
                             onclick={() => onTrackClick(trackIndex)}
                     >
@@ -196,10 +196,10 @@
                         {/if}
                         <div class="flex flex-col items-start justify-start flex-1 min-w-0">
                             <p class="text-sm font-medium truncate w-full text-start">{track.title}</p>
-                            <div class="flex flex-row gap-1 text-xs italic opacity-50">
-                                <span class="truncate">{track.artist.name}</span>
-                                <span>•</span>
-                                <span class="truncate">{track.album.title}</span>
+                            <div class="flex flex-row gap-1 text-xs italic opacity-50 min-w-0 w-full text-start">
+                                <span class="truncate min-w-0">{track.artist.name}</span>
+                                <span class="flex-shrink-0">•</span>
+                                <span class="truncate min-w-0">{track.album.title}</span>
                             </div>
                         </div>
                     </Button>
