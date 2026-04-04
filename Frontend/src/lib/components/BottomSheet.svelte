@@ -103,7 +103,7 @@
 {#if $bottomSheetState || swipeState.instance.isUp}
     <div
             use:swipeable={{
-            axis: "horizontal",
+            axis: "vertical",
             onDrag: (dy) => swipeState.instance.onDrag(dy),
             onRelease: () => swipeState.instance.onRelease(),
             handle: () => swipeState.instance.handle

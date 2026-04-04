@@ -6,24 +6,27 @@
     import {apiHttpService} from "$lib/services/apiHttpService";
     import {HorizontalSpringSwipe} from "$lib/actions/horizontalSpringSwipe.svelte";
     import {swipeable} from '$lib/actions/gestures.svelte';
-    import {flip} from "svelte/animate";
     import {slide} from "svelte/transition";
     import {hapticHeavy, hapticLight} from "$lib/utils/haptics";
     import {logEvent} from "$lib/services/listeningEventService.ts";
-    import {ContextType, ListeningEventType} from "$lib/utils/enums.ts";
+    import {ListeningEventType} from "$lib/utils/enums.ts";
     import {getCurrentContext} from "../../bottomSheetState.svelte.ts";
     import { DragReorder } from "$lib/actions/dragReorder.svelte";
     import {GripVerticalIcon} from "@lucide/svelte";
-
+    import { lockScroll, unlockScroll } from "../../bodyOverflowState.svelte"; // optional but recommended
 
     let { tracks, imageSize, height, showTrackNumbers=false, isQueue=false }:
         { tracks: App.Track[], imageSize: string, height: string, showTrackNumbers?:boolean } = $props();
+
     let tracksOrdered = $state(tracks.sort((a, b) => a.trackNumber - b.trackNumber));
     let currentlyPlayingTrackId = $derived($playerState.playList[$playerState.trackIndex]?.id ?? -1);
 
     let itemHeights = $state<number[]>([]);
     let isDragReorder = $state(false);
-    let handleEls = $state<(HTMLElement | null)[]>([]);
+
+    // CHANGED: id-keyed handle registry (stable across reorder)
+    let handleElsById = $state<Record<number, HTMLElement | null>>({});
+
     const reorder = new DragReorder(() => itemHeights[0] ?? 64);
 
     function onTrackClick(trackIndex: number) {
@@ -33,20 +36,14 @@
             $playerState.currentTime = 0;
             $playerState.isPlaying = true;
             hapticLight();
-        }
-        else {
+        } else {
             hapticHeavy();
         }
     }
+
     function handleRemoveAddFromQueue(track: App.Track) {
         if (isTrackInQueue(track)) {
-            logEvent(
-                track.id,
-                0,
-                0,
-                ListeningEventType.QueueRemove,
-                getCurrentContext()
-            )
+            logEvent(track.id, 0, 0, ListeningEventType.QueueRemove, getCurrentContext());
             if (track.id === currentlyPlayingTrackId) {
                 $playerState.isPlaying = false;
                 $playerState.currentTime = 0;
@@ -66,17 +63,10 @@
             if (isQueue) {
                 tracksOrdered = $playerState.playList;
             }
-        }
-        else {
+        } else {
             const trackToAdd = { ...track, trackNumber: $playerState.playList.length + 1 };
             $playerState.playList = [...$playerState.playList, trackToAdd];
-            logEvent(
-                track.id,
-                0,
-                0,
-                ListeningEventType.QueueRemove,
-                getCurrentContext()
-            )
+            logEvent(track.id, 0, 0, ListeningEventType.QueueRemove, getCurrentContext());
         }
     }
 
@@ -84,16 +74,47 @@
         return $playerState.playList.some(t => t.id === track.id);
     }
 
-    $effect(() => {
-        tracksOrdered; // reactive dependency
-        handleEls = new Array(tracksOrdered.length).fill(null);
-    });
-
     function maybeSlide(node: Element, params: { duration: number }) {
         if (isDragReorder) return {};
         return slide(node, params);
     }
 
+    // NEW: resolve drag start by id -> current index
+    function startReorderByTrackId(trackId: number) {
+        const idx = tracksOrdered.findIndex((t) => t.id === trackId);
+        if (idx !== -1) reorder.onDragStart(idx);
+    }
+
+    // NEW: lookup used by swipe handle callback
+    function getHandleEl(trackId: number): HTMLElement | null {
+        return handleElsById[trackId] ?? null;
+    }
+
+    // NEW: stable handle registration action
+    function registerHandle(node: HTMLElement, trackId: number) {
+        handleElsById[trackId] = node;
+        return {
+            update(newTrackId: number) {
+                if (newTrackId === trackId) return;
+                if (handleElsById[trackId] === node) delete handleElsById[trackId];
+                trackId = newTrackId;
+                handleElsById[trackId] = node;
+            },
+            destroy() {
+                if (handleElsById[trackId] === node) delete handleElsById[trackId];
+            }
+        };
+    }
+
+    // OPTIONAL: lock page scroll during active reorder only
+    $effect(() => {
+        if (reorder.isDragging) {
+            lockScroll("tracks-reorder");
+        } else {
+            unlockScroll("tracks-reorder");
+        }
+        return () => unlockScroll("tracks-reorder");
+    });
 </script>
 
 {#snippet Track(track: App.Track, trackIndex: number)}
@@ -110,34 +131,32 @@
     })()}
 
     <div class="border-b {trackIndex === 0 ? 'border-t' : ''}">
-        <!-- Outer: horizontal swipe (whole row) -->
         <div
                 class="relative overflow-hidden transition-shadow"
                 class:shadow-xl={isDragged}
                 class:bg-secondary={isDragged}
                 class:z-10={isDragged}
                 style="transform: translateY({isDragged ? reorder.y.current : displacement}px);
-                        transition: transform {reorder.isDragging ? (isDragged ? '0ms' : '150ms') : '0ms'} ease;"
+                   transition: transform {reorder.isDragging ? (isDragged ? '0ms' : '150ms') : '0ms'} ease;"
                 bind:clientHeight={itemHeights[trackIndex]}
                 use:swipeable={{
-                    axis: "horizontal",
-                    onDrag: (_dy, dx) => {
-                        if (!reorder.isDragging) {
-                            swipe.onDrag(swipe.isRight ? Math.min(dx ?? 0, 0) : Math.max(dx ?? 0, 0));
-                        }
-                    },
-                    onRelease: () => {
-                        if (!reorder.isDragging) swipe.onRelease();
+                axis: "horizontal",
+                onDrag: (_dy, dx) => {
+                    if (!reorder.isDragging) {
+                        swipe.onDrag(swipe.isRight ? Math.min(dx ?? 0, 0) : Math.max(dx ?? 0, 0));
                     }
-                }}
+                },
+                onRelease: () => {
+                    if (!reorder.isDragging) swipe.onRelease();
+                }
+            }}
         >
-            <!-- Inner: vertical drag (grip handle only) -->
             <div
                     class="flex items-center gap-0.5"
                     style="transform: translateX({swipe.x.current}px)"
                     use:swipeable={{
                     axis: "vertical",
-                    handle: () => handleEls[trackIndex],
+                    handle: () => (isQueue ? getHandleEl(track.id) : null), // CHANGED
                     onDrag: (dy) => {
                         if (reorder.isDragging) reorder.onDrag(dy);
                     },
@@ -151,9 +170,7 @@
                                 const currentTrackId = $playerState.playList[$playerState.trackIndex]?.id;
                                 const newTrackIndex = tracksOrdered.findIndex(t => t.id === currentTrackId);
                                 $playerState.playList = [...tracksOrdered];
-                                if (newTrackIndex !== -1) {
-                                    $playerState.trackIndex = newTrackIndex;
-                                }
+                                if (newTrackIndex !== -1) $playerState.trackIndex = newTrackIndex;
                             }
 
                             setTimeout(() => isDragReorder = false, 0);
@@ -166,10 +183,10 @@
                         size="icon"
                         class="flex-shrink-0 -ml-9 flex items-center justify-center shadow-2xl"
                         onclick={() => {
-                            swipe.isRight = false;
-                            swipe.x.set(0);
-                            handleRemoveAddFromQueue(track);
-                        }}
+                        swipe.isRight = false;
+                        swipe.x.set(0);
+                        handleRemoveAddFromQueue(track);
+                    }}
                 >
                     {#if isTrackInQueue(track)}
                         <ListMinusIcon class="text-red-200"/>
@@ -182,7 +199,7 @@
                     <Button
                             variant="ghost"
                             class="flex flex-row items-center gap-2 py-6 w-full rounded-none min-w-0
-                                {track.id === currentlyPlayingTrackId ? 'bg-primary/10 hover:bg-primary/15 border-l-2 border-l-primary py-6' : ''}"
+                               {track.id === currentlyPlayingTrackId ? 'bg-primary/10 hover:bg-primary/15 border-l-2 border-l-primary py-6' : ''}"
                             onclick={() => onTrackClick(trackIndex)}
                     >
                         {#if showTrackNumbers}
@@ -197,9 +214,9 @@
                         <div class="flex flex-col items-start justify-start flex-1 min-w-0">
                             <p class="text-sm font-medium truncate w-full text-start">{track.title}</p>
                             <div class="flex flex-row gap-1 text-xs italic opacity-50 min-w-0 w-full text-start">
-                                <span class="truncate min-w-0">{track.artist.name}</span>
+                                <span class="flex-shrink-0">{track.artist.name}</span>
                                 <span class="flex-shrink-0">•</span>
-                                <span class="truncate min-w-0">{track.album.title}</span>
+                                <span class="min-w-0 truncate">{track.album.title}</span>
                             </div>
                         </div>
                     </Button>
@@ -207,17 +224,18 @@
 
                 {#if isQueue}
                     <div
-                            bind:this={handleEls[trackIndex]}
-                            class="touch-none cursor-grab p-3 text-muted-foreground"
-                            ontouchstart={() => reorder.onDragStart(trackIndex)}
+                            use:registerHandle={track.id}
+                    class="cursor-grab p-3 text-muted-foreground"
+                    ontouchstart={() => startReorderByTrackId(track.id)}
                     >
-                        <GripVerticalIcon size={16} />
+                    <GripVerticalIcon size={16} />
                     </div>
                 {/if}
             </div>
         </div>
     </div>
 {/snippet}
+
 
 <ScrollArea
         style="height: {height};"

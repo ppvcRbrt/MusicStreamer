@@ -186,7 +186,7 @@
 
 <div
         use:swipeable={{
-        axis: "horizontal",
+        axis: "vertical",
         onDrag: (dy) => swipe.onDrag(dy),
         onRelease: () => swipe.onRelease(),
         handle: () => swipe.handle
