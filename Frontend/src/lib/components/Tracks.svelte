@@ -12,11 +12,19 @@
     import {logEvent} from "$lib/services/listeningEventService.ts";
     import {ContextType, ListeningEventType} from "$lib/utils/enums.ts";
     import {getCurrentContext} from "../../bottomSheetState.svelte.ts";
+    import { DragReorder } from "$lib/actions/dragReorder.svelte";
+    import {GripVerticalIcon} from "@lucide/svelte";
+
 
     let { tracks, imageSize, height, showTrackNumbers=false, isQueue=false }:
         { tracks: App.Track[], imageSize: string, height: string, showTrackNumbers?:boolean } = $props();
     let tracksOrdered = $state(tracks.sort((a, b) => a.trackNumber - b.trackNumber));
     let currentlyPlayingTrackId = $derived($playerState.playList[$playerState.trackIndex]?.id ?? -1);
+
+    let itemHeights = $state<number[]>([]);
+    let isDragReorder = $state(false);
+    let handleEls = $state<(HTMLElement | null)[]>([]);
+    const reorder = new DragReorder(() => itemHeights[0] ?? 64);
 
     function onTrackClick(trackIndex: number) {
         if (tracksOrdered[trackIndex].id !== currentlyPlayingTrackId) {
@@ -30,8 +38,6 @@
             hapticHeavy();
         }
     }
-
-
     function handleRemoveAddFromQueue(track: App.Track) {
         if (isTrackInQueue(track)) {
             logEvent(
@@ -77,24 +83,84 @@
     function isTrackInQueue(track: App.Track) {
         return $playerState.playList.some(t => t.id === track.id);
     }
+
+    $effect(() => {
+        tracksOrdered; // reactive dependency
+        handleEls = new Array(tracksOrdered.length).fill(null);
+    });
+
+    function maybeSlide(node: Element, params: { duration: number }) {
+        if (isDragReorder) return {};
+        return slide(node, params);
+    }
+
 </script>
 
 {#snippet Track(track: App.Track, trackIndex: number)}
     {@const swipe = new HorizontalSpringSwipe(() => 100, () => 60)}
-    <div class="border-b
-                {trackIndex === 0 ? 'border-t rounded-none' : ''}">
+    {@const isDragged = reorder.dragIndex === trackIndex}
+    {@const displacement = (() => {
+        if (!reorder.isDragging || isDragged) return 0;
+        const from = reorder.dragIndex!;
+        const to = reorder.targetIndex!;
+        const h = itemHeights[0] ?? 65;
+        if (from < to && trackIndex > from && trackIndex <= to) return -h;
+        if (from > to && trackIndex < from && trackIndex >= to) return h;
+        return 0;
+    })()}
+
+    <div class="border-b {trackIndex === 0 ? 'border-t' : ''}">
+        <!-- Outer: horizontal swipe (whole row) -->
         <div
-                class="relative overflow-hidden"
+                class="relative overflow-hidden transition-shadow"
+                class:shadow-xl={isDragged}
+                class:bg-secondary={isDragged}
+                class:z-10={isDragged}
+                style="transform: translateY({isDragged ? reorder.y.current : displacement}px);
+                        transition: transform {reorder.isDragging ? (isDragged ? '0ms' : '150ms') : '0ms'} ease;"
+                bind:clientHeight={itemHeights[trackIndex]}
                 use:swipeable={{
                     axis: "horizontal",
                     onDrag: (_dy, dx) => {
-                        const d = dx ?? 0;
-                        swipe.onDrag(swipe.isRight ? Math.min(d, 0) : Math.max(d, 0));
+                        if (!reorder.isDragging) {
+                            swipe.onDrag(swipe.isRight ? Math.min(dx ?? 0, 0) : Math.max(dx ?? 0, 0));
+                        }
                     },
-                    onRelease: () => swipe.onRelease(),
-                    handle: () => swipe.handle
-        }}>
-            <div class="flex items-center gap-0.5" style="transform: translateX({swipe.x.current}px)">
+                    onRelease: () => {
+                        if (!reorder.isDragging) swipe.onRelease();
+                    }
+                }}
+        >
+            <!-- Inner: vertical drag (grip handle only) -->
+            <div
+                    class="flex items-center gap-0.5"
+                    style="transform: translateX({swipe.x.current}px)"
+                    use:swipeable={{
+                    axis: "vertical",
+                    handle: () => handleEls[trackIndex],
+                    onDrag: (dy) => {
+                        if (reorder.isDragging) reorder.onDrag(dy);
+                    },
+                    onRelease: () => {
+                        if (reorder.isDragging) {
+                            isDragReorder = true;
+                            tracksOrdered = reorder.onRelease(tracksOrdered)
+                                .map((t, i) => ({ ...t, trackNumber: i + 1 }));
+
+                            if (isQueue) {
+                                const currentTrackId = $playerState.playList[$playerState.trackIndex]?.id;
+                                const newTrackIndex = tracksOrdered.findIndex(t => t.id === currentTrackId);
+                                $playerState.playList = [...tracksOrdered];
+                                if (newTrackIndex !== -1) {
+                                    $playerState.trackIndex = newTrackIndex;
+                                }
+                            }
+
+                            setTimeout(() => isDragReorder = false, 0);
+                        }
+                    }
+                }}
+            >
                 <Button
                         variant="ghost"
                         size="icon"
@@ -106,9 +172,9 @@
                         }}
                 >
                     {#if isTrackInQueue(track)}
-                        <ListMinusIcon/>
+                        <ListMinusIcon class="text-red-200"/>
                     {:else}
-                        <ListPlusIcon/>
+                        <ListPlusIcon class="text-green-200"/>
                     {/if}
                 </Button>
 
@@ -138,6 +204,16 @@
                         </div>
                     </Button>
                 </div>
+
+                {#if isQueue}
+                    <div
+                            bind:this={handleEls[trackIndex]}
+                            class="touch-none cursor-grab p-3 text-muted-foreground"
+                            ontouchstart={() => reorder.onDragStart(trackIndex)}
+                    >
+                        <GripVerticalIcon size={16} />
+                    </div>
+                {/if}
             </div>
         </div>
     </div>
@@ -149,7 +225,7 @@
         orientation="vertical">
         <div class="flex flex-col w-full justify-items-start">
             {#each tracksOrdered as track, index (track.id)}
-                <div animate:flip={{ duration: 300 }} transition:slide={{ duration: 300 }}>
+                <div transition:maybeSlide={{ duration: 300 }}>
                     {@render Track(track, index)}
                 </div>
             {/each}

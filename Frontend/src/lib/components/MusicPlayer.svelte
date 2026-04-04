@@ -124,7 +124,7 @@
             audioAnalyzerInitialized = true;
             setupAnalyser($playerState.audioHandle);
         }
-        if ($playerState.trackIndex !== lastLoggedTrackIndex && $playerState.audioHandle.currentTime === 0) {
+        if ($playerState.trackIndex !== lastLoggedTrackIndex && $playerState.audioHandle?.currentTime === 0) {
             lastLoggedTrackIndex = $playerState.trackIndex;
             logEvent(
                 $playerState.playList[$playerState.trackIndex].id,
