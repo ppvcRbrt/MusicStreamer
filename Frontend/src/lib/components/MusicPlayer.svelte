@@ -17,6 +17,7 @@
     import {setupAnalyser} from "$lib/utils/audioAnalyser.svelte";
     import { ListeningEventType, ContextType } from "$lib/utils/enums";
     import {logEvent} from "$lib/services/listeningEventService.ts";
+    import {hapticMedium} from "$lib/utils/haptics.ts";
 
     let playerHeight = $state(0);
 
@@ -154,6 +155,7 @@
             ListeningEventType.Skip,
             ContextType.Player,
         ).catch(console.error);
+        hapticMedium();
         playPrevious();
     }
     function handlePlayNext() {
@@ -164,6 +166,7 @@
             ListeningEventType.Skip,
             ContextType.Player,
         );
+        hapticMedium();
         playNext();
     }
 
@@ -210,7 +213,7 @@
                     <Button variant="ghost" class="rounded-2xl my-auto" size="icon" style="height: 3em; width: 3em;" onclick={handlePlayPrevious} disabled={$playerState.trackIndex <= 0}>
                         <SkipBackIcon style="height: 1.3em; width: 1.3em"/>
                     </Button>
-                    <Button variant="ghost" class="rounded-2xl my-auto" style="height: 5em; width: 5em;" onclick={togglePlay}>
+                    <Button variant="ghost" class="rounded-2xl my-auto" style="height: 5em; width: 5em;" onclick={()=> {togglePlay(); hapticMedium();}}>
                         {#if $playerState.isPlaying}
                             <PauseIcon style="height: 2em; width: 2em"/>
                         {:else}

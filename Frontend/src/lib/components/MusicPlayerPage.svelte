@@ -14,6 +14,7 @@
     import { fade } from 'svelte/transition';
     import {ContextType, ListeningEventType} from "$lib/utils/enums.ts";
     import {logEvent} from "$lib/services/listeningEventService.ts";
+    import {hapticMedium} from "$lib/utils/haptics.ts";
 
     let { progress = $bindable(), swipe }: { progress: number, swipe: VerticalSpringSwipe } = $props();
 
@@ -183,6 +184,7 @@
     }
 
     function handlePlayPrevious() {
+        hapticMedium();
         logEvent(
             $playerState.playList[$playerState.trackIndex].id,
             $playerState.audioHandle!.currentTime,
@@ -193,6 +195,7 @@
         playPrevious();
     }
     function handlePlayNext() {
+        hapticMedium();
         logEvent(
             $playerState.playList[$playerState.trackIndex].id,
             $playerState.audioHandle!.currentTime,
@@ -283,7 +286,7 @@
         <Button variant="ghost" class="rounded-2xl my-auto" size="icon" style="height: 3em; width: 3em;" onclick={handlePlayPrevious} disabled={$playerState.trackIndex <= 0}>
             <SkipBackIcon style="height: 2em; width: 2em"/>
         </Button>
-        <Button variant="ghost" class="rounded-2xl my-auto" style="height: 5em; width: 5em;" onclick={togglePlay}>
+        <Button variant="ghost" class="rounded-2xl my-auto" style="height: 5em; width: 5em;" onclick={()=>{togglePlay(); hapticMedium();}}>
             {#if $playerState.isPlaying}
                 <PauseIcon style="height: 3em; width: 3em"/>
             {:else}
