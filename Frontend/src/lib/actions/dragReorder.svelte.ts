@@ -1,5 +1,6 @@
 // src/lib/actions/dragReorder.svelte.ts
 import { Spring } from 'svelte/motion';
+import {hapticMedium} from "$lib/utils/haptics";
 
 export class DragReorder<T> {
     /** Spring-animated Y translation for the dragged item */
@@ -22,6 +23,7 @@ export class DragReorder<T> {
         this.dragIndex = index;
         this.targetIndex = index;
         this.y.set(0, { instant: true });
+        hapticMedium();
     }
 
     onDrag(dy: number) {
