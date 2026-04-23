@@ -46,8 +46,8 @@ services:
     build:
       context: ./Frontend
       dockerfile: Dockerfile
-    environment:
-      - PUBLIC_API_URL=http://roberts-mac-mini:8080
+      args:
+        PUBLIC_API_URL: http://roberts-mac-mini:8080
     ports:
       - "8082:80"
     restart: unless-stopped
