@@ -1,5 +1,6 @@
 // lib/utils/horizontalSwipe.svelte.ts
 import { Spring } from 'svelte/motion';
+import {hapticLight} from "$lib/utils/haptics";
 
 export class HorizontalSpringSwipe {
     x = new Spring(0, { stiffness: 0.2, damping: 0.8 });
@@ -47,6 +48,7 @@ export class HorizontalSpringSwipe {
                 this.x.set(Math.min(dx, this.rightPos), { instant: true }); // clamp to right
             }
         }
+        this.maybeHapticOnThresholdCross();
     }
 
     onSwipe(dir: 'left' | 'right') {
@@ -87,5 +89,37 @@ export class HorizontalSpringSwipe {
                 this.x.set(0); // snap back to center
             }
         }
+        this.resetThresholdHapticLatch();
+    }
+
+    private pastCommitThreshold = false;
+
+    private isPastCommitThreshold(x: number = this.x.current): boolean {
+        const width = this.width();
+
+        if (this.isLeft) {
+            return x > this.leftPos + width * 0.25;
+        }
+
+        if (this.isRight) {
+            return x < this.rightPos - width * 0.25;
+        }
+
+        return x < -(width * 0.25) || x > width * 0.25;
+    }
+
+    private maybeHapticOnThresholdCross() {
+        const isPast = this.isPastCommitThreshold();
+
+        if (isPast && !this.pastCommitThreshold) {
+            this.pastCommitThreshold = true;
+            void hapticLight();
+        } else if (!isPast && this.pastCommitThreshold) {
+            this.pastCommitThreshold = false;
+        }
+    }
+
+    private resetThresholdHapticLatch() {
+        this.pastCommitThreshold = false;
     }
 }

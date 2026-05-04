@@ -1,11 +1,12 @@
 // src/lib/bottomSheetState.svelte.ts
 import { writable } from 'svelte/store';
 import type {VerticalSpringSwipe} from "$lib/actions/verticalSpringSwipe.svelte";
+import {ContextType} from "$lib/utils/enums";
 
 export type BottomSheetContent = {
     title: string;
     items?: App.Artist | App.Album | App.Playlist;
-    type: 'artist' | 'album' | 'settings' | 'queue' ;
+    type: 'artist' | 'album' | 'playlist' | 'settings' | 'queue' ;
 } | null;
 
 export interface PageState {
@@ -31,11 +32,35 @@ export let pageState = $state<PageState>({
 export let swipeState = $state<{ instance: VerticalSpringSwipe | null }>({ instance: null });
 
 export const bottomSheetState = writable<BottomSheetContent>(null);
-
+export const deletedPlaylistId = writable<number | null>(null);
+export const addedToPlaylistTrack = writable<{ track: App.Track, playlistId: number } | null>(null);
+export const reorderedPlaylist = writable<{ tracks: App.Track[], playlistId: number } | null>(null);
 export function openSheet(content: NonNullable<BottomSheetContent>) {
     bottomSheetState.set(content);
 }
 
 export function closeSheet() {
     bottomSheetState.set(null);
+}
+
+export function getCurrentContext() {
+    let currentContext: ContextType = ContextType.Queue;
+    let currentSheet = ""
+    bottomSheetState.subscribe(value => currentSheet = value?.type ?? "")
+
+    switch (currentSheet) {
+        case "queue":
+            currentContext = ContextType.Queue;
+            break;
+        case "playlist":
+            currentContext = ContextType.Playlist;
+            break;
+        case "album":
+            currentContext = ContextType.Album;
+            break;
+        default:
+            currentContext = ContextType.Queue;
+            break;
+    }
+    return currentContext;
 }

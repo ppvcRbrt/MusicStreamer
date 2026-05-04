@@ -4,7 +4,8 @@ services:
       context: ./MusicStreamerBackend
       dockerfile: Dockerfile
     environment:
-      - MediaLocation=/music
+      - MediaFolder=/music
+      - CoverArtFolder=/coverArt
       - ConnectionStrings__MusicStreamerDb=Host=postgres:5432; Database=musicStreamerDb; Username=admin; Password=adminpassword
     depends_on:
       - postgres
@@ -12,7 +13,8 @@ services:
       - "8080:8080"
     restart: unless-stopped
     volumes:
-      - /Volumes/ExtSSD/Music:/music:ro
+      - /Volumes/ExtSSD/Music:/music
+      - /Volumes/ExtSSD/Music/coverArt:/coverArt
     user: root
 
   postgres:
@@ -35,7 +37,7 @@ services:
       PGADMIN_DEFAULT_EMAIL: user@domain.com
       PGADMIN_DEFAULT_PASSWORD: SuperSecret
     ports:
-      - "80:80"
+      - "80:80" 
     depends_on:
       - postgres
     restart: unless-stopped
@@ -46,8 +48,8 @@ services:
     build:
       context: ./Frontend
       dockerfile: Dockerfile
-    environment:
-      - PUBLIC_API_URL=http://roberts-mac-mini:8080
+      args:
+        PUBLIC_API_URL: http://roberts-mac-mini:8080
     ports:
       - "8082:80"
     restart: unless-stopped

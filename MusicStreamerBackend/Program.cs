@@ -13,6 +13,7 @@ builder.Services.AddScoped<IMusicBrainzService, MusicBrainzService>();
 builder.Services.AddScoped<IDbStorageService, DbStorageService>();
 builder.Services.AddScoped<IMusicService, MusicService>();
 builder.Services.AddScoped<IExternalMetadataService, ExternalMetadataService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 builder.Services.AddSingleton<AlbumMetadataSyncService>();
 builder.Services.AddSingleton<IAlbumMetadataSyncService>(p => p.GetRequiredService<AlbumMetadataSyncService>());

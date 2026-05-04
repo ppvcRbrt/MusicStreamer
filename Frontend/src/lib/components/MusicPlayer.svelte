@@ -15,7 +15,9 @@
     import { getTrackFile } from "$lib/utils/tracks";
     import { userSettings } from "../../settingsState.svelte";
     import {setupAnalyser} from "$lib/utils/audioAnalyser.svelte";
-    import {onMount} from "svelte";
+    import { ListeningEventType, ContextType } from "$lib/utils/enums";
+    import {logEvent} from "$lib/services/listeningEventService.ts";
+    import {hapticMedium} from "$lib/utils/haptics.ts";
 
     let playerHeight = $state(0);
 
@@ -116,13 +118,58 @@
             unlockScroll('music-player');
         }
     });
+    let lastLoggedTrackIndex = -1;
 
     function handleFirstPlay() {
         if (!audioAnalyzerInitialized && $playerState.audioHandle) {
             audioAnalyzerInitialized = true;
             setupAnalyser($playerState.audioHandle);
         }
+        if ($playerState.trackIndex !== lastLoggedTrackIndex && $playerState.audioHandle?.currentTime === 0) {
+            lastLoggedTrackIndex = $playerState.trackIndex;
+            logEvent(
+                $playerState.playList[$playerState.trackIndex].id,
+                $playerState.audioHandle!.currentTime,
+                $playerState.audioHandle!.duration,
+                ListeningEventType.Play,
+                ContextType.Player,
+            ).catch(console.error);
+        }
     }
+    function handleEnded() {
+        logEvent(
+            $playerState.playList[$playerState.trackIndex].id,
+            $playerState.audioHandle!.currentTime,
+            $playerState.audioHandle!.duration,
+            ListeningEventType.Complete,
+            ContextType.Player,
+        ).catch(console.error);
+        playNext();
+    }
+
+    function handlePlayPrevious() {
+        logEvent(
+            $playerState.playList[$playerState.trackIndex].id,
+            $playerState.audioHandle!.currentTime,
+            $playerState.audioHandle!.duration,
+            ListeningEventType.Skip,
+            ContextType.Player,
+        ).catch(console.error);
+        hapticMedium();
+        playPrevious();
+    }
+    function handlePlayNext() {
+        logEvent(
+            $playerState.playList[$playerState.trackIndex].id,
+            $playerState.audioHandle!.currentTime,
+            $playerState.audioHandle!.duration,
+            ListeningEventType.Skip,
+            ContextType.Player,
+        );
+        hapticMedium();
+        playNext();
+    }
+
 </script>
 
 <audio
@@ -131,10 +178,10 @@
         src={resourceUrl}
         ontimeupdate={onTimeUpdate}
         onloadedmetadata={onLoadedMetadata}
-        onended={playNext}
+        onended={handleEnded}
         onplay={() => {
-         $playerState.isPlaying = true;
-         handleFirstPlay();
+            $playerState.isPlaying = true;
+            handleFirstPlay();
         }}
         onpause={() => $playerState.isPlaying = false}
         oncanplay={onCanPlay}
@@ -142,7 +189,7 @@
 
 <div
         use:swipeable={{
-        axis: "horizontal",
+        axis: "vertical",
         onDrag: (dy) => swipe.onDrag(dy),
         onRelease: () => swipe.onRelease(),
         handle: () => swipe.handle
@@ -163,17 +210,17 @@
                     <TrackCard track={currentTrack} onclick={onTrackCardClick}/>
                 </div>
                 <div class="flex flex-shrink-0" style="filter: blur({blur}px);">
-                    <Button variant="ghost" class="rounded-2xl my-auto" size="icon" style="height: 3em; width: 3em;" onclick={playPrevious} disabled={$playerState.trackIndex <= 0}>
+                    <Button variant="ghost" class="rounded-2xl my-auto" size="icon" style="height: 3em; width: 3em;" onclick={handlePlayPrevious} disabled={$playerState.trackIndex <= 0}>
                         <SkipBackIcon style="height: 1.3em; width: 1.3em"/>
                     </Button>
-                    <Button variant="ghost" class="rounded-2xl my-auto" style="height: 5em; width: 5em;" onclick={togglePlay}>
+                    <Button variant="ghost" class="rounded-2xl my-auto" style="height: 5em; width: 5em;" onclick={()=> {togglePlay(); hapticMedium();}}>
                         {#if $playerState.isPlaying}
                             <PauseIcon style="height: 2em; width: 2em"/>
                         {:else}
                             <PlayIcon style="height: 2em; width: 2em"/>
                         {/if}
                     </Button>
-                    <Button variant="ghost" class="rounded-2xl my-auto" style="height: 3em; width: 3em;" onclick={playNext} disabled={$playerState.trackIndex >= $playerState.playList.length - 1}>
+                    <Button variant="ghost" class="rounded-2xl my-auto" style="height: 3em; width: 3em;" onclick={handlePlayNext} disabled={$playerState.trackIndex >= $playerState.playList.length - 1}>
                         <SkipForwardIcon style="height: 1.3em; width: 1.3em"/>
                     </Button>
                 </div>

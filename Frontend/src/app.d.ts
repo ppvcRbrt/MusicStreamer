@@ -7,6 +7,10 @@ declare global {
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}
+
+		type ListeningEventType = import('$lib/utils/enums').ListeningEventType;
+		type ContextType = import('$lib/utils/enums').ContextType;
+
 		interface TranscodingStatus {
 			lastError?: string;
 			state: "Idle" | "Running"
@@ -39,11 +43,12 @@ declare global {
 		}
 		interface Playlist {
 			id: number;
-			title: string;
+			title?: string;
 			image?: string;
 			imageSmall?: string;
 			imageLarge?: string;
-			tracks: Track[];
+			trackIds?: number[];
+			tracks?: Track[];
 			type: 'playlist';
 		}
 		interface Album {
@@ -78,6 +83,20 @@ declare global {
 			name: string;
 			disambiguation?: string;
 			musicBrainzUrl: string;
+		}
+
+		interface ListeningEvent {
+			trackId: number;
+			eventType: ListeningEventType;
+			timestamp: Date;
+			positionMs: number;
+			durationMs: number;
+			context: ContextType;
+		}
+
+		interface AddToPlaylistRequest {
+			trackId: number;
+			playlistId: number;
 		}
 	}
 }
