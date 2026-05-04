@@ -166,14 +166,18 @@
                             {:catch error}
                                 <p class="text-sm text-red-500 px-4">Failed to load albums.</p>
                             {/await}
+                        {:else if $bottomSheetState?.type === 'playlist'}
+                            {#key $bottomSheetState.items.tracks}
+                                <Tracks tracks={$bottomSheetState.items.tracks} showTrackNumbers={false} type={'playlist'} playlistId={$bottomSheetState.items.id} imageSize="2.2em" height="88%"/>
+                            {/key}
                         {:else if $bottomSheetState?.type === 'album'}
                             {#key $bottomSheetState.items.tracks}
-                                <Tracks tracks={$bottomSheetState.items.tracks} showTrackNumbers={true} height="88%"/>
+                                <Tracks tracks={$bottomSheetState.items.tracks} showTrackNumbers={true} type={'album'} height="88%"/>
                             {/key}
                         {:else if $bottomSheetState?.type === 'settings'}
                             <SettingsMenu onExternalMetadataClick={handleExternalMetadataClick}/>
                         {:else if $bottomSheetState?.type === 'queue'}
-                            <Tracks tracks={$playerState.playList} showTrackNumbers={false} isQueue={true} imageSize="2.2em" height="88%"/>
+                            <Tracks tracks={$playerState.playList} showTrackNumbers={false} type={'queue'} imageSize="2.2em" height="88%"/>
                         {/if}
                     </div>
                 {/if}

@@ -15,4 +15,5 @@ public class MusicStreamerDbContext : DbContext
     public DbSet<ExtAlbumEF> ExtAlbums { get; set; }
     public DbSet<TrackAltFormatsEF> TrackAltFormats { get; set; }
     public DbSet<ListeningEventEF> ListeningEvents { get; set; }
+    public DbSet<PlaylistEF> UserPlaylists { get; set; }
 }

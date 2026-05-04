@@ -14,6 +14,8 @@
     let filteredTracks: App.Track[] = $state(data.tracks);
     let filteredAlbums: App.Album[] = $state(data.albums);
     let filteredArtists: App.Artist[] = $state(data.artists);
+    let filteredPlaylists: App.Playlist[] = $state(data.playlists);
+
     let searchQuery = $state("");
     let scrolled = $state(false);
     let currentSection = $state("My Library");
@@ -21,16 +23,19 @@
     const trackFuse = new Fuse(data.tracks, { keys: ['title', 'artist.name', 'album.title'], minMatchCharLength: 1, includeScore: true, shouldSort: true, distance: 5 });
     const albumFuse = new Fuse(data.albums, { keys: ['title', 'artist.name'], ignoreLocation: true, minMatchCharLength: 2, includeScore: true });
     const artistFuse = new Fuse(data.artists, { keys: ['name'], ignoreLocation: true, minMatchCharLength: 2, includeScore: true });
+    const playlistFuse = new Fuse(data.playlists, { keys: ['title'], ignoreLocation: true, minMatchCharLength: 2, includeScore: true });
 
     $effect(() => {
         if (searchQuery.length > 0) {
             filteredTracks = trackFuse.search(searchQuery).map(r => r.item) as App.Track[];
             filteredAlbums = albumFuse.search(searchQuery).map(r => r.item) as App.Album[];
             filteredArtists = artistFuse.search(searchQuery).map(r => r.item) as App.Artist[];
+            filteredPlaylists = playlistFuse.search(searchQuery).map(r => r.item) as App.Playlist[];
         } else {
             filteredTracks = data.tracks;
             filteredAlbums = data.albums;
             filteredArtists = data.artists;
+            filteredPlaylists = data.playlists;
         }
     });
 
@@ -59,6 +64,14 @@
         })
     }
 
+    function handlePlaylistClicked(playlist: App.Playlist) {
+        openSheet({
+            type: "playlist",
+            title: playlist.title,
+            items: playlist
+        })
+    }
+
     function openSettingsMenu() {
         openSheet({
             type: "settings",
@@ -78,6 +91,10 @@
 
         observer.observe(heading);
         return { destroy: () => observer.disconnect() };
+    }
+
+    function handlePlaylistCreated(playlist: App.Playlist) {
+        filteredPlaylists = [...filteredPlaylists, playlist];
     }
 </script>
 
@@ -115,6 +132,9 @@
 
     <div id="artists-main" use:observeSection={"Artists"}>
         <Artists artists={filteredArtists} imageSize="8em" Class="mt-2" onArtistClicked={handleArtistClicked}/>
+    </div>
+    <div id="playlists-main">
+        <Playlists playlists={filteredPlaylists} title="My Playlists" allowAdd={true} imageSize="4em" Class="mt-5" onItemClick={handlePlaylistClicked} onPlaylistCreated={handlePlaylistCreated}/>
     </div>
     <div id="albums-main" use:observeSection={"Albums"}>
         <Playlists playlists={filteredAlbums} title="Albums" imageSize="4em" Class="mt-5" onItemClick={handleAlbumClicked}/>

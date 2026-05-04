@@ -1,8 +1,9 @@
 <script lang="ts">
     import {ScrollArea} from "$lib/components/ui/scroll-area";
     import {Button} from "$lib/components/ui/button";
-    import {ListMinusIcon, ListPlusIcon} from "@lucide/svelte";
+    import {ListMinusIcon, ListPlusIcon, ListMusicIcon} from "@lucide/svelte";
     import {playerState} from "../../musicPlayerState.svelte";
+    import {bottomSheetState} from "../../bottomSheetState.svelte.ts";
     import {apiHttpService} from "$lib/services/apiHttpService";
     import {HorizontalSpringSwipe} from "$lib/actions/horizontalSpringSwipe.svelte";
     import {swipeable} from '$lib/actions/gestures.svelte';
@@ -13,20 +14,26 @@
     import {getCurrentContext} from "../../bottomSheetState.svelte.ts";
     import { DragReorder } from "$lib/actions/dragReorder.svelte";
     import {GripVerticalIcon} from "@lucide/svelte";
-    import { lockScroll, unlockScroll } from "../../bodyOverflowState.svelte"; // optional but recommended
+    import { lockScroll, unlockScroll } from "../../bodyOverflowState.svelte";
+    import * as Select from "$lib/components/ui/select/index.js";
+    import * as Dialog from "$lib/components/ui/dialog/index.js";
+    import {onMount} from "svelte";
+    import {Input} from "$lib/components/ui/input";
 
-    let { tracks, imageSize, height, showTrackNumbers=false, isQueue=false }:
-        { tracks: App.Track[], imageSize: string, height: string, showTrackNumbers?:boolean } = $props();
+    let { tracks, imageSize, height, showTrackNumbers=false, type, playlistId }:  //isQueue=false
+        { tracks: App.Track[], imageSize: string, height: string, showTrackNumbers?:boolean, type:'queue'|'album'|'playlist', playlistId?:number } = $props();
 
     let tracksOrdered = $state(tracks.sort((a, b) => a.trackNumber - b.trackNumber));
     let currentlyPlayingTrackId = $derived($playerState.playList[$playerState.trackIndex]?.id ?? -1);
 
     let itemHeights = $state<number[]>([]);
     let isDragReorder = $state(false);
-
-    // CHANGED: id-keyed handle registry (stable across reorder)
     let handleElsById = $state<Record<number, HTMLElement | null>>({});
 
+    let userPlaylists = $state<App.Playlist[]>([]);
+    let isAddToPlaylistDialogOpen = $state(false);
+    let addToPlaylistId = $state<number | null>(null);
+    let addToPlaylistTrack = $state<App.Track | null>(null);
     const reorder = new DragReorder(() => itemHeights[0] ?? 64);
 
     function onTrackClick(trackIndex: number) {
@@ -39,6 +46,19 @@
         } else {
             hapticHeavy();
         }
+    }
+
+    async function handleRemoveFromPlaylist(track: App.Track) {
+        tracksOrdered = tracksOrdered.filter(t => t.id !== track.id);
+        tracks = tracks.filter(t => t.id !== track.id);
+        $bottomSheetState.items.tracks = tracks;
+        handleRemoveAddFromQueue(track);
+        let request: App.AddToPlaylistRequest = {
+            trackId : track.id,
+            playlistId: playlistId ?? 0,
+        };
+        await apiHttpService.post("/user/removeFromPlaylist", request)
+
     }
 
     function handleRemoveAddFromQueue(track: App.Track) {
@@ -60,13 +80,25 @@
                 $playerState.trackIndex = Math.max(0, $playerState.playList.length - 1);
             }
 
-            if (isQueue) {
+            if (type === 'queue') {
                 tracksOrdered = $playerState.playList;
             }
         } else {
             const trackToAdd = { ...track, trackNumber: $playerState.playList.length + 1 };
             $playerState.playList = [...$playerState.playList, trackToAdd];
             logEvent(track.id, 0, 0, ListeningEventType.QueueRemove, getCurrentContext());
+        }
+    }
+
+    function handleAddTrackToPlaylist() {
+        if(addToPlaylistTrack && addToPlaylistId) {
+            let request: App.AddToPlaylistRequest = {
+                trackId : addToPlaylistTrack.id,
+                playlistId: addToPlaylistId,
+            }
+            apiHttpService.post('/user/addToPlaylist', request);
+            isAddToPlaylistDialogOpen = false;
+            addToPlaylistTrack = null;
         }
     }
 
@@ -79,18 +111,15 @@
         return slide(node, params);
     }
 
-    // NEW: resolve drag start by id -> current index
     function startReorderByTrackId(trackId: number) {
         const idx = tracksOrdered.findIndex((t) => t.id === trackId);
         if (idx !== -1) reorder.onDragStart(idx);
     }
 
-    // NEW: lookup used by swipe handle callback
     function getHandleEl(trackId: number): HTMLElement | null {
         return handleElsById[trackId] ?? null;
     }
 
-    // NEW: stable handle registration action
     function registerHandle(node: HTMLElement, trackId: number) {
         handleElsById[trackId] = node;
         return {
@@ -105,8 +134,26 @@
             }
         };
     }
+    function getDisplacement(trackIndex: number): number {
+        if (!reorder.isDragging) return 0;
+        const from = reorder.dragIndex ?? 0;
+        const to = reorder.targetIndex ?? 0;
+        const h = itemHeights[0] ?? 65;
+        if (from < to && trackIndex > from && trackIndex <= to) return -h;
+        if (from > to && trackIndex < from && trackIndex >= to) return h;
+        return 0;
+    }
 
-    // OPTIONAL: lock page scroll during active reorder only
+    async function handleReorderPlaylist() {
+        let request: App.Playlist = {
+            title: "",
+            type: "playlist",
+            id: playlistId ?? 0,
+            trackIds: tracksOrdered.map(track => track.id)
+        };
+        await apiHttpService.post('/user/reorderPlaylist', request);
+    }
+
     $effect(() => {
         if (reorder.isDragging) {
             lockScroll("tracks-reorder");
@@ -115,20 +162,18 @@
         }
         return () => unlockScroll("tracks-reorder");
     });
+
+    onMount(() => {
+        apiHttpService.get<App.Playlist[]>('/user/myPlaylists').then(playlists => {
+            userPlaylists = playlists;
+        });
+    })
 </script>
 
 {#snippet Track(track: App.Track, trackIndex: number)}
-    {@const swipe = new HorizontalSpringSwipe(() => 100, () => 60)}
+    {@const swipe = new HorizontalSpringSwipe(() => 100 * 2, () => 60 * 2)}
     {@const isDragged = reorder.dragIndex === trackIndex}
-    {@const displacement = (() => {
-        if (!reorder.isDragging || isDragged) return 0;
-        const from = reorder.dragIndex!;
-        const to = reorder.targetIndex!;
-        const h = itemHeights[0] ?? 65;
-        if (from < to && trackIndex > from && trackIndex <= to) return -h;
-        if (from > to && trackIndex < from && trackIndex >= to) return h;
-        return 0;
-    })()}
+    {@const displacement = isDragged ? 0 : getDisplacement(trackIndex)}
 
     <div class="border-b {trackIndex === 0 ? 'border-t' : ''}">
         <div
@@ -156,7 +201,7 @@
                     style="transform: translateX({swipe.x.current}px)"
                     use:swipeable={{
                     axis: "vertical",
-                    handle: () => (isQueue ? getHandleEl(track.id) : null), // CHANGED
+                    handle: () => ((type === 'queue' || type === 'playlist') ? getHandleEl(track.id) : null), // CHANGED
                     onDrag: (dy) => {
                         if (reorder.isDragging) reorder.onDrag(dy);
                     },
@@ -166,11 +211,14 @@
                             tracksOrdered = reorder.onRelease(tracksOrdered)
                                 .map((t, i) => ({ ...t, trackNumber: i + 1 }));
 
-                            if (isQueue) {
+                            if (type === 'queue') {
                                 const currentTrackId = $playerState.playList[$playerState.trackIndex]?.id;
                                 const newTrackIndex = tracksOrdered.findIndex(t => t.id === currentTrackId);
                                 $playerState.playList = [...tracksOrdered];
                                 if (newTrackIndex !== -1) $playerState.trackIndex = newTrackIndex;
+                            }
+                            else if (type === 'playlist'){
+                                handleReorderPlaylist();
                             }
 
                             setTimeout(() => isDragReorder = false, 0);
@@ -178,23 +226,52 @@
                     }
                 }}
             >
-                <Button
-                        variant="ghost"
-                        size="icon"
-                        class="flex-shrink-0 -ml-9 flex items-center justify-center shadow-2xl"
-                        onclick={() => {
-                        swipe.isRight = false;
-                        swipe.x.set(0);
-                        handleRemoveAddFromQueue(track);
-                    }}
-                >
-                    {#if isTrackInQueue(track)}
-                        <ListMinusIcon class="text-red-200"/>
+                <div class="flex-shrink-0 -ml-20 flex">
+                    <Button
+                            variant="ghost"
+                            size="icon"
+                            class="flex items-center justify-center shadow-2xl"
+                            onclick={() => {
+                                swipe.isRight = false;
+                                swipe.x.set(0);
+                                handleRemoveAddFromQueue(track);
+                            }}
+                    >
+                        {#if isTrackInQueue(track)}
+                            <ListMinusIcon class="text-red-200"/>
+                        {:else}
+                            <ListPlusIcon class="text-green-200"/>
+                        {/if}
+                    </Button>
+                    {#if type !== 'playlist'}
+                        <Button
+                                variant="ghost"
+                                size="icon"
+                                class="flex items-center justify-center shadow-2xl"
+                                onclick={() => {
+                                    swipe.isRight = false;
+                                    swipe.x.set(0);
+                                    addToPlaylistTrack = track;
+                                    isAddToPlaylistDialogOpen = true;
+                                }}
+                        >
+                            <ListMusicIcon />
+                        </Button>
                     {:else}
-                        <ListPlusIcon class="text-green-200"/>
+                        <Button
+                                variant="ghost"
+                                size="icon"
+                                class="flex items-center justify-center shadow-2xl"
+                                onclick={() => {
+                                    swipe.isRight = false;
+                                    swipe.x.set(0);
+                                    handleRemoveFromPlaylist(track);
+                                }}
+                        >
+                            <ListMusicIcon class="text-red-200"/>
+                        </Button>
                     {/if}
-                </Button>
-
+                </div>
                 <div class="w-full min-w-0">
                     <Button
                             variant="ghost"
@@ -205,7 +282,7 @@
                         {#if showTrackNumbers}
                             <span class="w-6 text-left opacity-50">{track.trackNumber}</span>
                         {:else}
-                            {#if track.album.imageSmall}
+                            {#if track?.album?.imageSmall}
                                 <img src={`${apiHttpService.getBaseUrl()}${track.album.imageSmall}`} alt={track.title} class="rounded-lg flex-shrink-0" style="height: {imageSize}; width: {imageSize};"/>
                             {:else}
                                 <div class="bg-gray-200 rounded-lg flex-shrink-0" style="height: {imageSize}; width: {imageSize};" />
@@ -222,7 +299,7 @@
                     </Button>
                 </div>
 
-                {#if isQueue}
+                {#if type === 'queue' || type === 'playlist'}
                     <div
                             use:registerHandle={track.id}
                     class="cursor-grab p-3 text-muted-foreground"
@@ -250,3 +327,33 @@
         </div>
 </ScrollArea>
 
+{#if addToPlaylistTrack}
+    <Dialog.Root bind:open={isAddToPlaylistDialogOpen}>
+        <Dialog.Content>
+            <Dialog.Header>
+                <Dialog.Title>Add <span class="italic">{addToPlaylistTrack.title}</span> to Playlist</Dialog.Title>
+                <Dialog.Description class="m-2">
+                    <Select.Root type="single" bind:value={addToPlaylistId}>
+                        <Select.Trigger class="flex w-full justify-center">
+                            <span>{addToPlaylistId ? `Playlist: ${addToPlaylistId}` : 'Select a playlist'}</span>
+                        </Select.Trigger>
+                        <Select.Content class="w-full">
+                            <Select.Group>
+                                <Select.Label>My Playlists</Select.Label>
+                                {#each userPlaylists as playlist (playlist.id)}
+                                    <Select.Item
+                                            value={playlist.id}
+                                            label={playlist.title}
+                                    >
+                                        {playlist.title}
+                                    </Select.Item>
+                                {/each}
+                            </Select.Group>
+                        </Select.Content>
+                    </Select.Root>
+                    <Button class="w-full mt-2" onclick={handleAddTrackToPlaylist}>Add</Button>
+                </Dialog.Description>
+            </Dialog.Header>
+        </Dialog.Content>
+    </Dialog.Root>
+{/if}

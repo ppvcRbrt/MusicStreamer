@@ -43,11 +43,12 @@ declare global {
 		}
 		interface Playlist {
 			id: number;
-			title: string;
+			title?: string;
 			image?: string;
 			imageSmall?: string;
 			imageLarge?: string;
-			tracks: Track[];
+			trackIds?: number[];
+			tracks?: Track[];
 			type: 'playlist';
 		}
 		interface Album {
@@ -91,6 +92,11 @@ declare global {
 			positionMs: number;
 			durationMs: number;
 			context: ContextType;
+		}
+
+		interface AddToPlaylistRequest {
+			trackId: number;
+			playlistId: number;
 		}
 	}
 }

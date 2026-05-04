@@ -6,7 +6,7 @@ import {ContextType} from "$lib/utils/enums";
 export type BottomSheetContent = {
     title: string;
     items?: App.Artist | App.Album | App.Playlist;
-    type: 'artist' | 'album' | 'settings' | 'queue' ;
+    type: 'artist' | 'album' | 'playlist' | 'settings' | 'queue' ;
 } | null;
 
 export interface PageState {
