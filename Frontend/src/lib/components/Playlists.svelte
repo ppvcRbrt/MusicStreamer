@@ -54,6 +54,7 @@
             const playlist = (playlists as App.Playlist[]).find(p => p.id === added.playlistId);
             if (playlist) {
                 playlist.trackIds.push(added.track.id);
+                added.track.trackNumber= playlist.trackIds.length;
                 playlist.tracks.push(added.track);
                 addedToPlaylistTrack.set(null);
             }
