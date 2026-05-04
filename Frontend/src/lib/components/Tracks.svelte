@@ -3,7 +3,7 @@
     import {Button} from "$lib/components/ui/button";
     import {ListMinusIcon, ListPlusIcon, ListMusicIcon} from "@lucide/svelte";
     import {playerState} from "../../musicPlayerState.svelte";
-    import {addedToPlaylistTrack, bottomSheetState} from "../../bottomSheetState.svelte.ts";
+    import {addedToPlaylistTrack, bottomSheetState, reorderedPlaylist} from "../../bottomSheetState.svelte.ts";
     import {apiHttpService} from "$lib/services/apiHttpService";
     import {HorizontalSpringSwipe} from "$lib/actions/horizontalSpringSwipe.svelte";
     import {swipeable} from '$lib/actions/gestures.svelte';
@@ -153,6 +153,7 @@
             trackIds: tracksOrdered.map(track => track.id)
         };
         await apiHttpService.post('/user/reorderPlaylist', request);
+        reorderedPlaylist.set({ tracks: tracksOrdered, playlistId: playlistId });
     }
 
     $effect(() => {
@@ -218,7 +219,7 @@
                                 $playerState.playList = [...tracksOrdered];
                                 if (newTrackIndex !== -1) $playerState.trackIndex = newTrackIndex;
                             }
-                            else if (type === 'playlist'){
+                            if (type === 'playlist'){
                                 handleReorderPlaylist();
                             }
 

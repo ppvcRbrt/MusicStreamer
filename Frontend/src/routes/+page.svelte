@@ -5,7 +5,7 @@
     import type { PageProps } from './$types';
     import Search from "$lib/components/Search.svelte";
     import {ScrollArea} from "$lib/components/ui/scroll-area";
-    import {deletedPlaylistId, openSheet} from "../bottomSheetState.svelte";
+    import {deletedPlaylistId, openSheet, reorderedPlaylist} from "../bottomSheetState.svelte";
     import { isNativePlatform } from '$lib/utils/platform';
     import { SettingsIcon } from "@lucide/svelte";
     import {Button} from "$lib/components/ui/button";
@@ -105,6 +105,21 @@
             deletedPlaylistId.set(null);
         }
     });
+
+    $effect(() => {
+        const reorderedId = $reorderedPlaylist?.playlistId;
+        if(reorderedId) {
+            const playlist = data.playlists.find(p => p.id === reorderedId);
+            if(playlist) {
+                playlist.tracks = $reorderedPlaylist.tracks;
+            }
+            const filteredPlaylist = filteredPlaylists.find(p => p.id === reorderedId);
+            if(filteredPlaylist) {
+                filteredPlaylist.tracks = $reorderedPlaylist.tracks;
+            }
+            reorderedPlaylist.set(null);
+        }
+    })
 
 </script>
 
