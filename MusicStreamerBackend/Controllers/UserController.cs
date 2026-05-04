@@ -71,4 +71,15 @@ public class UserController : Controller
         }
         return Ok();
     }
+
+    [HttpDelete("deletePlaylist/{playlistId}")]
+    public async Task<IActionResult> DeletePlaylist(int playlistId)
+    {
+        var success = await _userService.DeletePlaylist(playlistId);
+        if (!success)
+        {
+            return BadRequest();
+        }
+        return Ok();
+    }
 }

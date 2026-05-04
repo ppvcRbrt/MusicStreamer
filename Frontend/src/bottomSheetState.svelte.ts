@@ -32,6 +32,7 @@ export let pageState = $state<PageState>({
 export let swipeState = $state<{ instance: VerticalSpringSwipe | null }>({ instance: null });
 
 export const bottomSheetState = writable<BottomSheetContent>(null);
+export const deletedPlaylistId = writable<number | null>(null);
 
 export function openSheet(content: NonNullable<BottomSheetContent>) {
     bottomSheetState.set(content);

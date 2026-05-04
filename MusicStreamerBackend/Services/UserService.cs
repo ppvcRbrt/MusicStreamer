@@ -12,7 +12,7 @@ public interface IUserService
     Task<List<PlaylistDto>> GetUserPlaylists();
     Task<bool> AddTrackToPlaylist(AddRemoveFromPlaylistRequestDto request);
     Task<bool> RemoveTrackFromPlaylist(AddRemoveFromPlaylistRequestDto request);
-
+    Task<bool> DeletePlaylist(int playlistId);
 }
 
 public class UserService : IUserService
@@ -50,7 +50,18 @@ public class UserService : IUserService
         }
         return null;
     }
-
+    
+    public async Task<bool> DeletePlaylist(int playlistId)
+    {
+        var playlist = await _dbContext.UserPlaylists.FindAsync(playlistId);
+        if (playlist != null)
+        {
+            _dbContext.UserPlaylists.Remove(playlist);
+            return (await _dbContext.SaveChangesAsync()) == 1;
+        }
+        return false;
+    }
+    
     public async Task<bool> ReorderPlaylist(PlaylistDto playlistDto)
     {
         var playlist = await _dbContext.UserPlaylists.FindAsync(playlistDto.Id);
