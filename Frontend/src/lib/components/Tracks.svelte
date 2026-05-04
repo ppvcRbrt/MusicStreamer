@@ -3,7 +3,7 @@
     import {Button} from "$lib/components/ui/button";
     import {ListMinusIcon, ListPlusIcon, ListMusicIcon} from "@lucide/svelte";
     import {playerState} from "../../musicPlayerState.svelte";
-    import {bottomSheetState} from "../../bottomSheetState.svelte.ts";
+    import {addedToPlaylistTrack, bottomSheetState} from "../../bottomSheetState.svelte.ts";
     import {apiHttpService} from "$lib/services/apiHttpService";
     import {HorizontalSpringSwipe} from "$lib/actions/horizontalSpringSwipe.svelte";
     import {swipeable} from '$lib/actions/gestures.svelte';
@@ -97,6 +97,7 @@
                 playlistId: addToPlaylistId,
             }
             apiHttpService.post('/user/addToPlaylist', request);
+            addedToPlaylistTrack.set({ track: addToPlaylistTrack, playlistId: addToPlaylistId });
             isAddToPlaylistDialogOpen = false;
             addToPlaylistTrack = null;
         }
@@ -226,7 +227,7 @@
                     }
                 }}
             >
-                <div class="flex-shrink-0 -ml-20 flex">
+                <div class="flex-shrink-0 -ml-18.5 flex">
                     <Button
                             variant="ghost"
                             size="icon"

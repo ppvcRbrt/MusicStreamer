@@ -33,7 +33,7 @@ export let swipeState = $state<{ instance: VerticalSpringSwipe | null }>({ insta
 
 export const bottomSheetState = writable<BottomSheetContent>(null);
 export const deletedPlaylistId = writable<number | null>(null);
-
+export const addedToPlaylistTrack = writable<{ track: App.Track, playlistId: number } | null>(null);
 export function openSheet(content: NonNullable<BottomSheetContent>) {
     bottomSheetState.set(content);
 }

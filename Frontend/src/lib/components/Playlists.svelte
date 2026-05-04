@@ -6,7 +6,7 @@
     import * as Dialog from "$lib/components/ui/dialog/index.js";
     import {Input} from "$lib/components/ui/input";
     import {onMount} from "svelte";
-    import {deletedPlaylistId} from "../../bottomSheetState.svelte.ts";
+    import {addedToPlaylistTrack, deletedPlaylistId} from "../../bottomSheetState.svelte.ts";
 
     let { playlists, imageSize, height, title, allowAdd=false, Class="", onItemClick, onPlaylistCreated }:
         { playlists: App.Playlist[]|App.Album[], imageSize: string, height: string, title?: string, allowAdd: boolean, Class: string, onItemClick?: (itemType:App.Playlist|App.Album) => void, onPlaylistCreated?: (playlist: App.Playlist) => void} = $props();
@@ -47,13 +47,19 @@
             .map(e => e.image);
     }
 
+
     $effect(() => {
-        const deletedId = $deletedPlaylistId;
-        if (deletedId !== null) {
-            playlists = (playlists as App.Playlist[]).filter(p => p.id !== deletedId);
-            deletedPlaylistId.set(null);
+        const added = $addedToPlaylistTrack;
+        if (added !== null) {
+            const playlist = (playlists as App.Playlist[]).find(p => p.id === added.playlistId);
+            if (playlist) {
+                playlist.trackIds.push(added.track.id);
+                playlist.tracks.push(added.track);
+                addedToPlaylistTrack.set(null);
+            }
         }
-    });
+    })
+
 </script>
 
 {#snippet Playlist(playlist: App.Playlist|App.Album, first: boolean = false)}

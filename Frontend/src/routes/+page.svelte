@@ -5,7 +5,7 @@
     import type { PageProps } from './$types';
     import Search from "$lib/components/Search.svelte";
     import {ScrollArea} from "$lib/components/ui/scroll-area";
-    import {openSheet} from "../bottomSheetState.svelte";
+    import {deletedPlaylistId, openSheet} from "../bottomSheetState.svelte";
     import { isNativePlatform } from '$lib/utils/platform';
     import { SettingsIcon } from "@lucide/svelte";
     import {Button} from "$lib/components/ui/button";
@@ -96,6 +96,16 @@
     function handlePlaylistCreated(playlist: App.Playlist) {
         filteredPlaylists = [...filteredPlaylists, playlist];
     }
+
+    $effect(() => {
+        const deletedId = $deletedPlaylistId;
+        if (deletedId !== null) {
+            data.playlists = (data.playlists as App.Playlist[]).filter(p => p.id !== deletedId);
+            filteredPlaylists = (filteredPlaylists as App.Playlist[]).filter(p => p.id !== deletedId);
+            deletedPlaylistId.set(null);
+        }
+    });
+
 </script>
 
 <ScrollArea
