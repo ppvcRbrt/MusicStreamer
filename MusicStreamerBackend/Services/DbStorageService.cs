@@ -145,8 +145,13 @@ public class DbStorageService : IDbStorageService
         }
         return tracks;
     }
+
     private IEnumerable<AlbumEF> BuildAlbums(List<TrackFile> tracksFiles, ArtistEF artist)
     {
+        if (artist.Id == 0)
+        {
+            artist = _dbContext.Artists.FirstOrDefault(a => a.Name.ToLower() == artist.Name.ToLower()) ?? artist;    
+        }
         var artistFiles = tracksFiles.Where(t => t.Metadata.Artist == artist.Name);
         var albumNames = artistFiles.Select(t => t.Metadata.Album).Where(a => !string.IsNullOrEmpty(a)).Distinct();
         var albums = new List<AlbumEF>();

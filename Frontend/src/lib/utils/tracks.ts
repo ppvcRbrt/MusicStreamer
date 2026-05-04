@@ -6,8 +6,8 @@ export function getTrackFile(track: App.Track, preferredFormat: string): string 
             formats[extension ?? "Unknown"] = filePath;
         }
         let trackfile = formats[preferredFormat];
-        if (!trackfile) {
-            return formats[0];
+        if (trackfile === null || trackfile === undefined) {
+            return Object.values(formats)[0];
         }
         return trackfile;
     }

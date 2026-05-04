@@ -1,5 +1,6 @@
 // lib/utils/verticalSpringSwipe.svelte.ts
 import { Spring } from 'svelte/motion';
+import {hapticLight} from "$lib/utils/haptics";
 
 export class VerticalSpringSwipe {
     y = new Spring(0, { stiffness: 0.2, damping: 0.8 });
@@ -38,6 +39,7 @@ export class VerticalSpringSwipe {
                 this.y.set(Math.max(dy, this.top), { instant: true });
             }
         }
+        this.maybeHapticOnThresholdCross();
     }
 
     onSwipe(dir: 'up' | 'down') {
@@ -69,5 +71,37 @@ export class VerticalSpringSwipe {
         else {
             this.y.set(0);
         }
+        this.resetThresholdHapticLatch();
+    }
+
+    private pastCommitThreshold = false;
+
+    private isPastCommitThreshold(y: number = this.y.current): boolean {
+        const height = this.height();
+
+        if (!this.isUp) {
+            return y < -(height * 0.25);
+        }
+
+        if (this.swipeDownThreshold !== undefined) {
+            return y > this.top + this.swipeDownThreshold;
+        }
+
+        return y > -(height * 0.75);
+    }
+
+    private maybeHapticOnThresholdCross() {
+        const isPast = this.isPastCommitThreshold();
+
+        if (isPast && !this.pastCommitThreshold) {
+            this.pastCommitThreshold = true;
+            void hapticLight();
+        } else if (!isPast && this.pastCommitThreshold) {
+            this.pastCommitThreshold = false;
+        }
+    }
+
+    private resetThresholdHapticLatch() {
+        this.pastCommitThreshold = false;
     }
 }

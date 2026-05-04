@@ -1,20 +1,40 @@
 <script lang="ts">
-    import { ScrollArea } from "$lib/components/ui/scroll-area";
-    import { Button } from "$lib/components/ui/button";
-    import { ListMinusIcon, ListPlusIcon } from "@lucide/svelte";
-    import { playerState } from "../../musicPlayerState.svelte";
-    import { apiHttpService } from "$lib/services/apiHttpService";
-    import { HorizontalSpringSwipe } from "$lib/actions/horizontalSpringSwipe.svelte";
-    import { swipeable } from '$lib/actions/gestures.svelte';
-    import { flip } from "svelte/animate";
-    import { slide } from "svelte/transition";
-    import {hapticHeavy, hapticLight, hapticMedium} from "$lib/utils/haptics";
+    import {ScrollArea} from "$lib/components/ui/scroll-area";
+    import {Button} from "$lib/components/ui/button";
+    import {ListMinusIcon, ListPlusIcon, ListMusicIcon} from "@lucide/svelte";
+    import {playerState} from "../../musicPlayerState.svelte";
+    import {bottomSheetState} from "../../bottomSheetState.svelte.ts";
+    import {apiHttpService} from "$lib/services/apiHttpService";
+    import {HorizontalSpringSwipe} from "$lib/actions/horizontalSpringSwipe.svelte";
+    import {swipeable} from '$lib/actions/gestures.svelte';
+    import {slide} from "svelte/transition";
+    import {hapticHeavy, hapticLight} from "$lib/utils/haptics";
+    import {logEvent} from "$lib/services/listeningEventService.ts";
+    import {ListeningEventType} from "$lib/utils/enums.ts";
+    import {getCurrentContext} from "../../bottomSheetState.svelte.ts";
+    import { DragReorder } from "$lib/actions/dragReorder.svelte";
+    import {GripVerticalIcon} from "@lucide/svelte";
+    import { lockScroll, unlockScroll } from "../../bodyOverflowState.svelte";
+    import * as Select from "$lib/components/ui/select/index.js";
+    import * as Dialog from "$lib/components/ui/dialog/index.js";
+    import {onMount} from "svelte";
+    import {Input} from "$lib/components/ui/input";
 
+    let { tracks, imageSize, height, showTrackNumbers=false, type, playlistId }:  //isQueue=false
+        { tracks: App.Track[], imageSize: string, height: string, showTrackNumbers?:boolean, type:'queue'|'album'|'playlist', playlistId?:number } = $props();
 
-    let { tracks, imageSize, height, showTrackNumbers=false, isQueue=false }:
-        { tracks: App.Track[], imageSize: string, height: string, showTrackNumbers?:boolean } = $props();
     let tracksOrdered = $state(tracks.sort((a, b) => a.trackNumber - b.trackNumber));
     let currentlyPlayingTrackId = $derived($playerState.playList[$playerState.trackIndex]?.id ?? -1);
+
+    let itemHeights = $state<number[]>([]);
+    let isDragReorder = $state(false);
+    let handleElsById = $state<Record<number, HTMLElement | null>>({});
+
+    let userPlaylists = $state<App.Playlist[]>([]);
+    let isAddToPlaylistDialogOpen = $state(false);
+    let addToPlaylistId = $state<number | null>(null);
+    let addToPlaylistTrack = $state<App.Track | null>(null);
+    const reorder = new DragReorder(() => itemHeights[0] ?? 64);
 
     function onTrackClick(trackIndex: number) {
         if (tracksOrdered[trackIndex].id !== currentlyPlayingTrackId) {
@@ -23,14 +43,27 @@
             $playerState.currentTime = 0;
             $playerState.isPlaying = true;
             hapticLight();
-        }
-        else {
+        } else {
             hapticHeavy();
         }
     }
 
+    async function handleRemoveFromPlaylist(track: App.Track) {
+        tracksOrdered = tracksOrdered.filter(t => t.id !== track.id);
+        tracks = tracks.filter(t => t.id !== track.id);
+        $bottomSheetState.items.tracks = tracks;
+        handleRemoveAddFromQueue(track);
+        let request: App.AddToPlaylistRequest = {
+            trackId : track.id,
+            playlistId: playlistId ?? 0,
+        };
+        await apiHttpService.post("/user/removeFromPlaylist", request)
+
+    }
+
     function handleRemoveAddFromQueue(track: App.Track) {
         if (isTrackInQueue(track)) {
+            logEvent(track.id, 0, 0, ListeningEventType.QueueRemove, getCurrentContext());
             if (track.id === currentlyPlayingTrackId) {
                 $playerState.isPlaying = false;
                 $playerState.currentTime = 0;
@@ -47,65 +80,209 @@
                 $playerState.trackIndex = Math.max(0, $playerState.playList.length - 1);
             }
 
-            if (isQueue) {
+            if (type === 'queue') {
                 tracksOrdered = $playerState.playList;
             }
-        }
-        else {
+        } else {
             const trackToAdd = { ...track, trackNumber: $playerState.playList.length + 1 };
             $playerState.playList = [...$playerState.playList, trackToAdd];
+            logEvent(track.id, 0, 0, ListeningEventType.QueueRemove, getCurrentContext());
+        }
+    }
+
+    function handleAddTrackToPlaylist() {
+        if(addToPlaylistTrack && addToPlaylistId) {
+            let request: App.AddToPlaylistRequest = {
+                trackId : addToPlaylistTrack.id,
+                playlistId: addToPlaylistId,
+            }
+            apiHttpService.post('/user/addToPlaylist', request);
+            isAddToPlaylistDialogOpen = false;
+            addToPlaylistTrack = null;
         }
     }
 
     function isTrackInQueue(track: App.Track) {
         return $playerState.playList.some(t => t.id === track.id);
     }
+
+    function maybeSlide(node: Element, params: { duration: number }) {
+        if (isDragReorder) return {};
+        return slide(node, params);
+    }
+
+    function startReorderByTrackId(trackId: number) {
+        const idx = tracksOrdered.findIndex((t) => t.id === trackId);
+        if (idx !== -1) reorder.onDragStart(idx);
+    }
+
+    function getHandleEl(trackId: number): HTMLElement | null {
+        return handleElsById[trackId] ?? null;
+    }
+
+    function registerHandle(node: HTMLElement, trackId: number) {
+        handleElsById[trackId] = node;
+        return {
+            update(newTrackId: number) {
+                if (newTrackId === trackId) return;
+                if (handleElsById[trackId] === node) delete handleElsById[trackId];
+                trackId = newTrackId;
+                handleElsById[trackId] = node;
+            },
+            destroy() {
+                if (handleElsById[trackId] === node) delete handleElsById[trackId];
+            }
+        };
+    }
+    function getDisplacement(trackIndex: number): number {
+        if (!reorder.isDragging) return 0;
+        const from = reorder.dragIndex ?? 0;
+        const to = reorder.targetIndex ?? 0;
+        const h = itemHeights[0] ?? 65;
+        if (from < to && trackIndex > from && trackIndex <= to) return -h;
+        if (from > to && trackIndex < from && trackIndex >= to) return h;
+        return 0;
+    }
+
+    async function handleReorderPlaylist() {
+        let request: App.Playlist = {
+            title: "",
+            type: "playlist",
+            id: playlistId ?? 0,
+            trackIds: tracksOrdered.map(track => track.id)
+        };
+        await apiHttpService.post('/user/reorderPlaylist', request);
+    }
+
+    $effect(() => {
+        if (reorder.isDragging) {
+            lockScroll("tracks-reorder");
+        } else {
+            unlockScroll("tracks-reorder");
+        }
+        return () => unlockScroll("tracks-reorder");
+    });
+
+    onMount(() => {
+        apiHttpService.get<App.Playlist[]>('/user/myPlaylists').then(playlists => {
+            userPlaylists = playlists;
+        });
+    })
 </script>
 
 {#snippet Track(track: App.Track, trackIndex: number)}
-    {@const swipe = new HorizontalSpringSwipe(() => 100, () => 60)}
-    <div class="border-b
-                {trackIndex === 0 ? 'border-t rounded-none' : ''}">
-        <div
-                class="relative overflow-hidden"
-                use:swipeable={{
-                    axis: "horizontal",
-                    onDrag: (_dy, dx) => {
-                        const d = dx ?? 0;
-                        swipe.onDrag(swipe.isRight ? Math.min(d, 0) : Math.max(d, 0));
-                    },
-                    onRelease: () => swipe.onRelease(),
-                    handle: () => swipe.handle
-        }}>
-            <div class="flex items-center gap-0.5" style="transform: translateX({swipe.x.current}px)">
-                <Button
-                        variant="ghost"
-                        size="icon"
-                        class="flex-shrink-0 -ml-9 flex items-center justify-center shadow-2xl"
-                        onclick={() => {
-                            swipe.isRight = false;
-                            swipe.x.set(0);
-                            handleRemoveAddFromQueue(track);
-                        }}
-                >
-                    {#if isTrackInQueue(track)}
-                        <ListMinusIcon/>
-                    {:else}
-                        <ListPlusIcon/>
-                    {/if}
-                </Button>
+    {@const swipe = new HorizontalSpringSwipe(() => 100 * 2, () => 60 * 2)}
+    {@const isDragged = reorder.dragIndex === trackIndex}
+    {@const displacement = isDragged ? 0 : getDisplacement(trackIndex)}
 
-                <div class="w-full">
+    <div class="border-b {trackIndex === 0 ? 'border-t' : ''}">
+        <div
+                class="relative overflow-hidden transition-shadow"
+                class:shadow-xl={isDragged}
+                class:bg-secondary={isDragged}
+                class:z-10={isDragged}
+                style="transform: translateY({isDragged ? reorder.y.current : displacement}px);
+                   transition: transform {reorder.isDragging ? (isDragged ? '0ms' : '150ms') : '0ms'} ease;"
+                bind:clientHeight={itemHeights[trackIndex]}
+                use:swipeable={{
+                axis: "horizontal",
+                onDrag: (_dy, dx) => {
+                    if (!reorder.isDragging) {
+                        swipe.onDrag(swipe.isRight ? Math.min(dx ?? 0, 0) : Math.max(dx ?? 0, 0));
+                    }
+                },
+                onRelease: () => {
+                    if (!reorder.isDragging) swipe.onRelease();
+                }
+            }}
+        >
+            <div
+                    class="flex items-center gap-0.5"
+                    style="transform: translateX({swipe.x.current}px)"
+                    use:swipeable={{
+                    axis: "vertical",
+                    handle: () => ((type === 'queue' || type === 'playlist') ? getHandleEl(track.id) : null), // CHANGED
+                    onDrag: (dy) => {
+                        if (reorder.isDragging) reorder.onDrag(dy);
+                    },
+                    onRelease: () => {
+                        if (reorder.isDragging) {
+                            isDragReorder = true;
+                            tracksOrdered = reorder.onRelease(tracksOrdered)
+                                .map((t, i) => ({ ...t, trackNumber: i + 1 }));
+
+                            if (type === 'queue') {
+                                const currentTrackId = $playerState.playList[$playerState.trackIndex]?.id;
+                                const newTrackIndex = tracksOrdered.findIndex(t => t.id === currentTrackId);
+                                $playerState.playList = [...tracksOrdered];
+                                if (newTrackIndex !== -1) $playerState.trackIndex = newTrackIndex;
+                            }
+                            else if (type === 'playlist'){
+                                handleReorderPlaylist();
+                            }
+
+                            setTimeout(() => isDragReorder = false, 0);
+                        }
+                    }
+                }}
+            >
+                <div class="flex-shrink-0 -ml-20 flex">
                     <Button
                             variant="ghost"
-                            class="flex flex-row items-center gap-2 py-6 w-full rounded-none
-                                {track.id === currentlyPlayingTrackId ? 'bg-primary/10 hover:bg-primary/15 border-l-2 border-l-primary py-6' : ''}"
+                            size="icon"
+                            class="flex items-center justify-center shadow-2xl"
+                            onclick={() => {
+                                swipe.isRight = false;
+                                swipe.x.set(0);
+                                handleRemoveAddFromQueue(track);
+                            }}
+                    >
+                        {#if isTrackInQueue(track)}
+                            <ListMinusIcon class="text-red-200"/>
+                        {:else}
+                            <ListPlusIcon class="text-green-200"/>
+                        {/if}
+                    </Button>
+                    {#if type !== 'playlist'}
+                        <Button
+                                variant="ghost"
+                                size="icon"
+                                class="flex items-center justify-center shadow-2xl"
+                                onclick={() => {
+                                    swipe.isRight = false;
+                                    swipe.x.set(0);
+                                    addToPlaylistTrack = track;
+                                    isAddToPlaylistDialogOpen = true;
+                                }}
+                        >
+                            <ListMusicIcon />
+                        </Button>
+                    {:else}
+                        <Button
+                                variant="ghost"
+                                size="icon"
+                                class="flex items-center justify-center shadow-2xl"
+                                onclick={() => {
+                                    swipe.isRight = false;
+                                    swipe.x.set(0);
+                                    handleRemoveFromPlaylist(track);
+                                }}
+                        >
+                            <ListMusicIcon class="text-red-200"/>
+                        </Button>
+                    {/if}
+                </div>
+                <div class="w-full min-w-0">
+                    <Button
+                            variant="ghost"
+                            class="flex flex-row items-center gap-2 py-6 w-full rounded-none min-w-0
+                               {track.id === currentlyPlayingTrackId ? 'bg-primary/10 hover:bg-primary/15 border-l-2 border-l-primary py-6' : ''}"
                             onclick={() => onTrackClick(trackIndex)}
                     >
                         {#if showTrackNumbers}
                             <span class="w-6 text-left opacity-50">{track.trackNumber}</span>
                         {:else}
-                            {#if track.album.imageSmall}
+                            {#if track?.album?.imageSmall}
                                 <img src={`${apiHttpService.getBaseUrl()}${track.album.imageSmall}`} alt={track.title} class="rounded-lg flex-shrink-0" style="height: {imageSize}; width: {imageSize};"/>
                             {:else}
                                 <div class="bg-gray-200 rounded-lg flex-shrink-0" style="height: {imageSize}; width: {imageSize};" />
@@ -113,18 +290,29 @@
                         {/if}
                         <div class="flex flex-col items-start justify-start flex-1 min-w-0">
                             <p class="text-sm font-medium truncate w-full text-start">{track.title}</p>
-                            <div class="flex flex-row gap-1 text-xs italic opacity-50">
-                                <span class="truncate">{track.artist.name}</span>
-                                <span>•</span>
-                                <span class="truncate">{track.album.title}</span>
+                            <div class="flex flex-row gap-1 text-xs italic opacity-50 min-w-0 w-full text-start">
+                                <span class="flex-shrink-0">{track.artist.name}</span>
+                                <span class="flex-shrink-0">•</span>
+                                <span class="min-w-0 truncate">{track.album.title}</span>
                             </div>
                         </div>
                     </Button>
                 </div>
+
+                {#if type === 'queue' || type === 'playlist'}
+                    <div
+                            use:registerHandle={track.id}
+                    class="cursor-grab p-3 text-muted-foreground"
+                    ontouchstart={() => startReorderByTrackId(track.id)}
+                    >
+                    <GripVerticalIcon size={16} />
+                    </div>
+                {/if}
             </div>
         </div>
     </div>
 {/snippet}
+
 
 <ScrollArea
         style="height: {height};"
@@ -132,10 +320,40 @@
         orientation="vertical">
         <div class="flex flex-col w-full justify-items-start">
             {#each tracksOrdered as track, index (track.id)}
-                <div animate:flip={{ duration: 300 }} transition:slide={{ duration: 300 }}>
+                <div transition:maybeSlide={{ duration: 300 }}>
                     {@render Track(track, index)}
                 </div>
             {/each}
         </div>
 </ScrollArea>
 
+{#if addToPlaylistTrack}
+    <Dialog.Root bind:open={isAddToPlaylistDialogOpen}>
+        <Dialog.Content>
+            <Dialog.Header>
+                <Dialog.Title>Add <span class="italic">{addToPlaylistTrack.title}</span> to Playlist</Dialog.Title>
+                <Dialog.Description class="m-2">
+                    <Select.Root type="single" bind:value={addToPlaylistId}>
+                        <Select.Trigger class="flex w-full justify-center">
+                            <span>{addToPlaylistId ? `Playlist: ${addToPlaylistId}` : 'Select a playlist'}</span>
+                        </Select.Trigger>
+                        <Select.Content class="w-full">
+                            <Select.Group>
+                                <Select.Label>My Playlists</Select.Label>
+                                {#each userPlaylists as playlist (playlist.id)}
+                                    <Select.Item
+                                            value={playlist.id}
+                                            label={playlist.title}
+                                    >
+                                        {playlist.title}
+                                    </Select.Item>
+                                {/each}
+                            </Select.Group>
+                        </Select.Content>
+                    </Select.Root>
+                    <Button class="w-full mt-2" onclick={handleAddTrackToPlaylist}>Add</Button>
+                </Dialog.Description>
+            </Dialog.Header>
+        </Dialog.Content>
+    </Dialog.Root>
+{/if}

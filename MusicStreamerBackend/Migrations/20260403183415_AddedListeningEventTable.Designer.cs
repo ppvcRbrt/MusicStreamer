@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MusicStreamerBackend.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MusicStreamerBackend.Migrations
 {
     [DbContext(typeof(MusicStreamerDbContext))]
-    partial class MusicStreamerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260403183415_AddedListeningEventTable")]
+    partial class AddedListeningEventTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -218,30 +221,6 @@ namespace MusicStreamerBackend.Migrations
                     b.HasIndex("TrackId");
 
                     b.ToTable("ListeningEvents");
-                });
-
-            modelBuilder.Entity("MusicStreamerBackend.Data.EFModels.User.PlaylistEF", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.PrimitiveCollection<int[]>("TrackIds")
-                        .IsRequired()
-                        .HasColumnType("integer[]");
-
-                    b.Property<int?>("UserId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("UserPlaylists");
                 });
 
             modelBuilder.Entity("MusicStreamerBackend.Data.EFModels.Music.AlbumEF", b =>
